@@ -275,7 +275,7 @@ function scan_target() {
 }
 
 function main() {
-  log "[*] Starting DeathConfuser v4..."
+  log "[*] Starting DeathConfuser..."
   log "[*] Listener URL: $LISTENER_URL"
   log "[*] Targets: $(wc -l < "$TARGET_FILE")"
 
