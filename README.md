@@ -1,4 +1,4 @@
-# DeathConfuser (Beta)
+#  DeathConfuser (Beta)
 
 🚨 **DeathConfuser** is an ultra-featured, multi-target automation tool for **Dependency Confusion** vulnerability detection.  
 🎯 Built in pure Bash, this script scans live targets, detects tech stacks, extracts JS packages, checks unclaimed NPM names, and even generates live payloads for exploitation testing.  
