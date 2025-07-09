@@ -76,4 +76,5 @@ payloads/
 This tool is provided for educational and authorized testing purposes only.
 The author is not responsible for any misuse. Always have permission before scanning or exploiting any system.
 
-## 🧠 Author
+## 📜 License
+This project is licensed under the terms of the [MIT License](LICENSE).
