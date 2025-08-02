@@ -67,7 +67,7 @@ DeathConfuser/
 ### 1️⃣ Install
 
 ```bash
-git clone https://github.com/yourname/DeathConfuser.git
+git clone https://github.com/HasilMusil/DeathConfuser.git
 cd DeathConfuser
 pip install -r requirements.txt
 ```
