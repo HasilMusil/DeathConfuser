@@ -288,4 +288,4 @@ The author is not responsible for misuse.
 
 ## 📜 License
 
-This project is licensed over the [MIT License][LICENSE].
+This project is licensed over the [MIT License](LICENSE).
