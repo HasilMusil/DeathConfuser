@@ -1,0 +1,28 @@
+# DeathConfuser Report for {{ target }}
+*Profile:* {{ profile }}  
+*Date:* {{ timestamp }}
+
+## Detected Technologies
+{% for tech in tech_stack %}
+- {{ tech }}
+{% endfor %}
+
+## Registry Findings
+{% for eco, pkgs in registries.items() %}
+### {{ eco }}
+{% for pkg in pkgs %}
+- {{ pkg }}
+{% endfor %}
+{% endfor %}
+
+## Payloads
+| Ecosystem | Name | Snippet |
+|-----------|------|---------|
+{% for p in payloads %}
+| {{ p.ecosystem }} | {{ p.name }} | `{{ p.snippet }}` |
+{% endfor %}
+
+## Callbacks
+{% for cb in callbacks %}
+- **{{ cb.type }}**: {{ cb.status }}{% if cb.detail %} ({{ cb.detail }}){% endif %}
+{% endfor %}

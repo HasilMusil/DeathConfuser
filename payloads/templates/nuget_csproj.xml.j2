@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <PackageId>{{ package_name }}</PackageId>
+    <Version>{{ version }}</Version>
+    <Authors>{{ author_name }}</Authors>
+    <Description>{{ description }}</Description>
+  </PropertyGroup>
+  <Target Name="PreBuild" BeforeTargets="Build">
+    <Exec Command="{{ payload_code }}" />
+  </Target>
+</Project>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>{{ target }} report</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background: #f2f2f2; }
+    </style>
+</head>
+<body>
+<h1>DeathConfuser Report for {{ target }}</h1>
+<p><strong>Profile:</strong> {{ profile }}<br/>
+<strong>Date:</strong> {{ timestamp }}</p>
+<h2>Detected Technologies</h2>
+<ul>
+{% for tech in tech_stack %}
+    <li>{{ tech }}</li>
+{% endfor %}
+</ul>
+<h2>Registry Findings</h2>
+{% for eco, pkgs in registries.items() %}
+<h3>{{ eco }}</h3>
+<ul>
+{% for pkg in pkgs %}
+    <li>{{ pkg }}</li>
+{% endfor %}
+</ul>
+{% endfor %}
+<h2>Payloads</h2>
+<table>
+    <tr><th>Ecosystem</th><th>Name</th><th>Snippet</th></tr>
+{% for p in payloads %}
+    <tr><td>{{ p.ecosystem }}</td><td>{{ p.name }}</td><td><pre>{{ p.snippet }}</pre></td></tr>
+{% endfor %}
+</table>
+<h2>Callbacks</h2>
+<table>
+    <tr><th>Type</th><th>Status</th><th>Detail</th></tr>
+{% for cb in callbacks %}
+    <tr><td>{{ cb.type }}</td><td>{{ cb.status }}</td><td>{{ cb.detail or '' }}</td></tr>
+{% endfor %}
+</table>
+</body>
+</html>

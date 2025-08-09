@@ -1,0 +1,10 @@
+# Passive reconnaissance profile without publication
+scan_mode: recon-only
+payloads:
+  type: noop
+callbacks:
+  interactsh: false
+  dns: false
+  burp_collaborator: false
+automation:
+  auto_publish: false

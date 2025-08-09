@@ -1,0 +1,1 @@
+"""Maven package manager module."""

@@ -1,0 +1,9 @@
+# Development profile with verbose logging and dry-run
+dry_run: true
+logging:
+  level: debug
+proxy:
+  use_proxy: false
+callbacks:
+  http_listener: true
+output_dir: ./debug_reports

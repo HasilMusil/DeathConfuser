@@ -1,0 +1,9 @@
+# CI burner profile focused on pipeline poisoning
+scan_mode: full
+integration:
+  ci_injector: true
+payloads:
+  delayed_execution: true
+automation:
+  auto_publish: true
+# Proxy rotation remains moderate by default

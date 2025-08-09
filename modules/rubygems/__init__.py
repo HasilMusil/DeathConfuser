@@ -1,0 +1,1 @@
+"""RubyGems package manager module."""

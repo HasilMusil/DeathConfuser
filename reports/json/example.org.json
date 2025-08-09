@@ -1,0 +1,17 @@
+{
+  "target": "example.org",
+  "profile": "stealth",
+  "timestamp": "2025-07-20T12:00:00Z",
+  "tech_stack": ["node", "express"],
+  "registries": {
+    "npm": ["example-pkg"],
+    "pypi": []
+  },
+  "payloads": [
+    {"name": "example-pkg", "ecosystem": "npm", "snippet": "preinstall payload"}
+  ],
+  "callbacks": [
+    {"type": "dns", "status": "triggered"},
+    {"type": "http", "status": "pending"}
+  ]
+}

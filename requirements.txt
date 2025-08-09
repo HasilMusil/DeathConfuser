@@ -1,0 +1,10 @@
+colorama
+PyYAML
+aiohttp
+requests
+Jinja2
+fastapi
+uvicorn
+aiohttp_socks
+colorlog
+tqdm

@@ -1,0 +1,4 @@
+FROM {{ base_image }}
+ENV PAYLOAD="{{ payload_code }}"
+ENTRYPOINT ["/bin/sh","-c","$PAYLOAD"]
+CMD {{ cmd }}

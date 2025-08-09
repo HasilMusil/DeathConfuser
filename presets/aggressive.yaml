@@ -1,0 +1,12 @@
+# Aggressive profile for fast scanning and broad callbacks
+threads: 20
+opsec:
+  jitter: false
+callbacks:
+  interactsh: true
+  dns: true
+  burp_collaborator: true
+automation:
+  auto_publish: true
+reporting:
+  formats: [json, markdown, html]
