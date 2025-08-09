@@ -17,6 +17,14 @@ SCAN_TASK: asyncio.Task | None = None
 RESULTS: List[Dict[str, object]] = []
 
 
+def _collect_results(task: asyncio.Task) -> None:
+    """Safely gather results from a completed scan task."""
+    try:
+        RESULTS.extend(task.result())
+    except Exception as exc:  # pragma: no cover - task errors
+        get_logger(__name__).error("scan task failed: %s", exc)
+
+
 @api.post("/start")
 async def start(request: Request) -> Dict[str, str]:
     """Begin a scan based on posted targets and optional preset."""
@@ -33,7 +41,7 @@ async def start(request: Request) -> Dict[str, str]:
     if not CONFIG or not targets:
         return {"status": "error", "detail": "no targets"}
     SCAN_TASK = asyncio.create_task(run_scan(CONFIG, targets))
-    SCAN_TASK.add_done_callback(lambda t: RESULTS.extend(t.result()))
+    SCAN_TASK.add_done_callback(_collect_results)
     return {"status": "started"}
 
 
@@ -51,7 +59,7 @@ async def stop() -> Dict[str, str]:
 @api.get("/status")
 async def status() -> Dict[str, str]:
     running = SCAN_TASK is not None and not SCAN_TASK.done()
-    return {"running": str(running), "results": str(len(RESULTS))}
+    return {"running": running, "results": len(RESULTS)}
 
 
 @api.get("/results")

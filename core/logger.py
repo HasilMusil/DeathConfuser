@@ -55,7 +55,10 @@ def get_logger(
     old_emit = console_handler.emit
 
     def emit(record):
-        record.msg = _colorize(record.levelname, record.msg)
+        # ``record.msg`` may not always be a string (e.g. logging objects), so
+        # ensure it is converted before applying ANSI colour codes to avoid
+        # ``TypeError`` exceptions during logging.
+        record.msg = _colorize(record.levelname, str(record.msg))
         old_emit(record)
 
     console_handler.emit = emit  # type: ignore
