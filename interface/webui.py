@@ -19,6 +19,14 @@ SCAN_TASK: asyncio.Task | None = None
 RESULTS: List[Dict[str, object]] = []
 
 
+def _collect_results(task: asyncio.Task) -> None:
+    """Safely append scan results when the task completes."""
+    try:
+        RESULTS.extend(task.result())
+    except Exception as exc:  # pragma: no cover - task errors
+        get_logger(__name__).error("scan task failed: %s", exc)
+
+
 @app.get("/")
 async def dashboard() -> HTMLResponse:
     """Simple dashboard with current status and log tail."""
@@ -73,7 +81,7 @@ async def start(request: Request) -> RedirectResponse:
     if not CONFIG or not targets:
         return RedirectResponse("/", status_code=303)
     SCAN_TASK = asyncio.create_task(run_scan(CONFIG, targets))
-    SCAN_TASK.add_done_callback(lambda t: RESULTS.extend(t.result()))
+    SCAN_TASK.add_done_callback(_collect_results)
     return RedirectResponse("/", status_code=303)
 
 

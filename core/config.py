@@ -58,10 +58,17 @@ class Config:
 
         if config_path:
             config.update(_load_yaml(Path(config_path)))
+            # Persist the path so interfaces (API/WebUI) can reload the same
+            # configuration when applying a different preset later on.
+            config["config_path"] = str(config_path)
 
         if overrides:
             for key, value in overrides.items():
                 _set_deep(config, key, value)
+
+        if preset:
+            # Record the preset used so it can be referenced or reloaded.
+            config["preset"] = preset
 
         return cls(config)
 
