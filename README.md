@@ -3,7 +3,7 @@
 **The Ultimate Framework for Dependency Confusion & CI/CD Exploitation**
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![License](https://img.shields.io/badge/License-Private-red)
+![License](https://img.shields.io/badge/License-MIT-red)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 ![OPSEC](https://img.shields.io/badge/OPSEC-Military%20Grade-black)
 
