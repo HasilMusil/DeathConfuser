@@ -117,7 +117,7 @@ python3 deathconfuser.py --report html --output report.html
 
 ---
 
-###🔎 How Config Works in DeathConfuser
+### 🔎 How Config Works in DeathConfuser
 
 * **Main config file:** `config.yaml`
 * **Presets folder:** `presets/` (e.g. `dev.yaml`, `stealth.yaml`, `aggressive.yaml`)
