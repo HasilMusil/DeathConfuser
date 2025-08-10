@@ -4,17 +4,33 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 import asyncio
+import sys
+from pathlib import Path
 from typing import List, Dict
 
-from core.config import Config
-from core.logger import get_logger
-from .cli import run_scan
+if __package__ is None or __package__ == "":  # pragma: no cover - script run
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+    from DeathConfuser.core.config import Config
+    from DeathConfuser.core.logger import get_logger
+    from DeathConfuser.interface.cli import run_scan
+else:  # pragma: no cover - imported as package
+    from DeathConfuser.core.config import Config
+    from DeathConfuser.core.logger import get_logger
+    from .cli import run_scan
 
 api = FastAPI(title="DeathConfuser API")
 
 CONFIG: Config | None = None
 SCAN_TASK: asyncio.Task | None = None
 RESULTS: List[Dict[str, object]] = []
+
+
+def _collect_results(task: asyncio.Task) -> None:
+    """Safely gather results from a completed scan task."""
+    try:
+        RESULTS.extend(task.result())
+    except Exception as exc:  # pragma: no cover - task errors
+        get_logger(__name__).error("scan task failed: %s", exc)
 
 
 @api.post("/start")
@@ -33,7 +49,7 @@ async def start(request: Request) -> Dict[str, str]:
     if not CONFIG or not targets:
         return {"status": "error", "detail": "no targets"}
     SCAN_TASK = asyncio.create_task(run_scan(CONFIG, targets))
-    SCAN_TASK.add_done_callback(lambda t: RESULTS.extend(t.result()))
+    SCAN_TASK.add_done_callback(_collect_results)
     return {"status": "started"}
 
 
@@ -51,7 +67,7 @@ async def stop() -> Dict[str, str]:
 @api.get("/status")
 async def status() -> Dict[str, str]:
     running = SCAN_TASK is not None and not SCAN_TASK.done()
-    return {"running": str(running), "results": str(len(RESULTS))}
+    return {"running": running, "results": len(RESULTS)}
 
 
 @api.get("/results")

@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 

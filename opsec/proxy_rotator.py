@@ -19,7 +19,7 @@ except Exception:  # pragma: no cover - optional dependency may be missing
     Controller = None
     Signal = None
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 
 class ProxyRotator:

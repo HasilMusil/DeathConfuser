@@ -6,7 +6,7 @@ import random
 from textwrap import dedent
 from typing import Optional
 
-from payloads.builder import PayloadBuilder
+from ...payloads.builder import PayloadBuilder
 
 builder = PayloadBuilder()
 

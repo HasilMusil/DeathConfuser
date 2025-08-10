@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional, Set
 
 import aiohttp
 
-from core.logger import get_logger
-from core.opsec import jitter
+from ..core.logger import get_logger
+from ..core.opsec import jitter
 
 API_BASE = "https://gitlab.com/api/v4"
 

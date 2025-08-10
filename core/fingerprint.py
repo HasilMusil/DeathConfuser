@@ -22,7 +22,9 @@ def fingerprint_url(url: str) -> Set[str]:
     try:
         response = requests.get(url, timeout=10)
     except requests.RequestException as exc:  # pragma: no cover - network errors
-        log.debug(f"fingerprint failed for %s: %s", url, exc)
+        # Avoid mixing f-strings with percent formatting which caused the
+        # literal ``%s`` tokens to appear in logs instead of the values.
+        log.debug("fingerprint failed for %s: %s", url, exc)
         return set()
 
     hints: Set[str] = set()

@@ -7,8 +7,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import asyncio
 from typing import List, Dict
 
-from core.config import Config
-from core.logger import get_logger
+from ..core.config import Config
+from ..core.logger import get_logger
 from .cli import run_scan
 
 
@@ -17,6 +17,14 @@ app = FastAPI(title="DeathConfuser WebUI")
 CONFIG: Config | None = None
 SCAN_TASK: asyncio.Task | None = None
 RESULTS: List[Dict[str, object]] = []
+
+
+def _collect_results(task: asyncio.Task) -> None:
+    """Safely append scan results when the task completes."""
+    try:
+        RESULTS.extend(task.result())
+    except Exception as exc:  # pragma: no cover - task errors
+        get_logger(__name__).error("scan task failed: %s", exc)
 
 
 @app.get("/")
@@ -73,7 +81,7 @@ async def start(request: Request) -> RedirectResponse:
     if not CONFIG or not targets:
         return RedirectResponse("/", status_code=303)
     SCAN_TASK = asyncio.create_task(run_scan(CONFIG, targets))
-    SCAN_TASK.add_done_callback(lambda t: RESULTS.extend(t.result()))
+    SCAN_TASK.add_done_callback(_collect_results)
     return RedirectResponse("/", status_code=303)
 
 

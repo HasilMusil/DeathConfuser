@@ -10,9 +10,9 @@ import random
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from core.logger import get_logger
-from opsec import load_profiles, PROFILE_FILE
-from utils.fs_utils import atomic_write, cleanup, temporary_directory
+from ..core.logger import get_logger
+from ..opsec import load_profiles, PROFILE_FILE
+from ..utils.fs_utils import atomic_write, cleanup, temporary_directory
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -75,8 +75,10 @@ class PayloadBuilder:
         payload_code: Optional[str] = None,
         obfuscate: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        *,
+        return_meta: bool = False,
         **variables: Any,
-    ) -> str:
+    ) -> str | tuple[str, Dict[str, Any]]:
         """Render ``template`` with metadata and optional payload."""
         meta = metadata.copy() if metadata else {}
         profile = self._random_profile()
@@ -89,7 +91,8 @@ class PayloadBuilder:
         meta.update(variables)
         tmpl = self.env.get_template(template)
         self.log.debug("Rendering template %s with %s", template, meta)
-        return tmpl.render(**meta)
+        rendered = tmpl.render(**meta)
+        return (rendered, meta) if return_meta else rendered
 
     def build(
         self,
@@ -103,11 +106,12 @@ class PayloadBuilder:
         **variables: Any,
     ) -> RenderedPayload:
         """Render template, optionally write to ``output_dir`` and return info."""
-        content = self.render(
+        content, meta = self.render(
             template,
             payload_code=payload_code,
             obfuscate=obfuscate,
             metadata=metadata,
+            return_meta=True,
             **variables,
         )
         path: Optional[Path] = None
@@ -127,4 +131,4 @@ class PayloadBuilder:
                 atomic_write(tmp_path, content)
                 self.log.debug("Wrote ephemeral payload to %s", tmp_path)
                 cleanup(tmp_path)
-        return RenderedPayload(content=content, path=path, metadata=metadata or {})
+        return RenderedPayload(content=content, path=path, metadata=meta)

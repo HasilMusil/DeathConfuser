@@ -6,5 +6,6 @@ Jinja2
 fastapi
 uvicorn
 aiohttp_socks
+stem
 colorlog
 tqdm

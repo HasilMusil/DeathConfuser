@@ -9,8 +9,8 @@ from typing import Any, Dict, Iterable, List, Optional, Set
 
 import aiohttp
 
-from core.logger import get_logger
-from core.opsec import jitter
+from ..core.logger import get_logger
+from ..core.opsec import jitter
 
 API_BASE = "https://api.github.com"
 

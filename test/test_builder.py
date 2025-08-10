@@ -1,5 +1,10 @@
+import sys
+from pathlib import Path
 import unittest
-from payloads.builder import PayloadBuilder
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from DeathConfuser.payloads.builder import PayloadBuilder
+
 
 class BuilderTest(unittest.TestCase):
     def test_render_template(self):

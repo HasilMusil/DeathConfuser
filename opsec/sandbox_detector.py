@@ -11,7 +11,7 @@ import os
 import subprocess
 from typing import List
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 
 def check_indicators() -> List[str]:
