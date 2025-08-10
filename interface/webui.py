@@ -7,8 +7,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import asyncio
 from typing import List, Dict
 
-from core.config import Config
-from core.logger import get_logger
+from ..core.config import Config
+from ..core.logger import get_logger
 from .cli import run_scan
 
 

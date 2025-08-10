@@ -7,8 +7,8 @@ from typing import Iterable, List, Set
 
 import aiohttp
 
-from core.logger import get_logger
-from modules import typo_variants
+from ...core.logger import get_logger
+from .. import typo_variants
 
 TERRAFORM_URL = "https://registry.terraform.io/v1/modules/{path}"
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import base64
 from typing import Optional
 
-from payloads.builder import PayloadBuilder
+from ...payloads.builder import PayloadBuilder
 
 builder = PayloadBuilder()
 

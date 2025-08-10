@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 import aiohttp
 
-from opsec.dns_over_https import resolve
+from ..opsec.dns_over_https import resolve
 
 from aiohttp import web
 

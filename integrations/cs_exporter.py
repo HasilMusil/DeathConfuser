@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Dict, Iterable, Any
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 
 def _powershell_stager(url: str) -> str:

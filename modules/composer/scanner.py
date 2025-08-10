@@ -4,8 +4,8 @@ from __future__ import annotations
 import aiohttp
 from typing import List, Set
 
-from core.logger import get_logger
-from modules import typo_variants
+from ...core.logger import get_logger
+from .. import typo_variants
 
 COMPOSER_URL = "https://repo.packagist.org/p/{name}.json"
 

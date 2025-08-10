@@ -13,7 +13,7 @@ from typing import List, Sequence
 
 import aiohttp
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 RESOLVERS: Sequence[str] = (
     "https://dns.google/resolve",

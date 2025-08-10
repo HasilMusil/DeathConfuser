@@ -4,8 +4,8 @@ from __future__ import annotations
 import aiohttp
 from typing import List, Set
 
-from core.logger import get_logger
-from modules import typo_variants
+from ...core.logger import get_logger
+from .. import typo_variants
 
 NUGET_URL = "https://api.nuget.org/v3/registration5-semver1/{name}/index.json"
 

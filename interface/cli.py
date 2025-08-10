@@ -14,15 +14,20 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import sys
+from pathlib import Path
 from typing import Optional, List, Dict
 
-from core.config import Config
-from core.logger import get_logger
-from core import init as core_init
-from core.targets import load_targets
-from core.recon import Recon
-from core.concurrency import run_tasks
-from modules import MODULES, load_module
+if __package__ is None or __package__ == "":  # pragma: no cover - script run
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+from DeathConfuser.core.config import Config
+from DeathConfuser.core.logger import get_logger
+from DeathConfuser.core import init as core_init
+from DeathConfuser.core.targets import load_targets
+from DeathConfuser.core.recon import Recon
+from DeathConfuser.core.concurrency import run_tasks
+from DeathConfuser.modules import MODULES, load_module
 
 __all__ = ["main", "run_scan"]
 
@@ -101,7 +106,7 @@ def main(argv: Optional[list[str]] = None) -> None:
 
         if args.output:
             from pathlib import Path
-            from reports import ReportExporter
+            from DeathConfuser.reports import ReportExporter
 
             exporter = ReportExporter()
             output = exporter.export_all(

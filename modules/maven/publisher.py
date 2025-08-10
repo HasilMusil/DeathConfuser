@@ -6,10 +6,10 @@ import random
 import shutil
 from typing import Optional
 
-from core.logger import get_logger
-from modules.maven.scanner import Scanner
-from opsec import load_profiles
-from utils.fs_utils import temporary_directory
+from ...core.logger import get_logger
+from .scanner import Scanner
+from ...opsec import load_profiles
+from ...utils.fs_utils import temporary_directory
 
 log = get_logger(__name__)
 

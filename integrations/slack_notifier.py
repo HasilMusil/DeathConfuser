@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 
 class SlackNotifier:

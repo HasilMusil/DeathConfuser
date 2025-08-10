@@ -13,7 +13,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Optional
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 
 @dataclass

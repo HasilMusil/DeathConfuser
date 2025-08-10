@@ -6,7 +6,7 @@ import asyncio
 import random
 from typing import Dict, List, Optional
 
-from opsec import load_profiles, is_sandbox
+from ..opsec import load_profiles, is_sandbox
 
 from .logger import get_logger
 

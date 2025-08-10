@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, Optional
 
 import aiohttp
 
-from core.logger import get_logger
+from ..core.logger import get_logger
 
 
 async def _post(session: aiohttp.ClientSession, url: str, payload: Dict[str, Any], headers: Optional[Dict[str, str]], retries: int) -> int:

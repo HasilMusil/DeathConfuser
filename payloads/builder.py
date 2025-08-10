@@ -10,9 +10,9 @@ import random
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from core.logger import get_logger
-from opsec import load_profiles, PROFILE_FILE
-from utils.fs_utils import atomic_write, cleanup, temporary_directory
+from ..core.logger import get_logger
+from ..opsec import load_profiles, PROFILE_FILE
+from ..utils.fs_utils import atomic_write, cleanup, temporary_directory
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 

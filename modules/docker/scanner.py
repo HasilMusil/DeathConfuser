@@ -8,8 +8,8 @@ from typing import Iterable, List, Set
 
 import aiohttp
 
-from core.logger import get_logger
-from modules import typo_variants
+from ...core.logger import get_logger
+from .. import typo_variants
 
 DOCKER_URL = "https://hub.docker.com/v2/repositories/{repo}/"
 

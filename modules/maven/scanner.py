@@ -4,8 +4,8 @@ from __future__ import annotations
 import aiohttp
 from typing import List, Set
 
-from core.logger import get_logger
-from modules import typo_variants
+from ...core.logger import get_logger
+from .. import typo_variants
 
 SEARCH_URL = "https://search.maven.org/solrsearch/select?q=g:%22{group}%22+AND+a:%22{artifact}%22&rows=1&wt=json"
 
