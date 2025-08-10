@@ -288,6 +288,12 @@ opsec:
 
 ---
 
+## 📢 Announcements
+
+**Please note that all the features mentioned here might not be implemented yet. These will be included in future updates to the software.**
+
+---
+
 ## ⚠️ Disclaimer
 
 **DeathConfuser is for authorized penetration testing and research purposes only.**
