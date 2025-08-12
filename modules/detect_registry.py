@@ -4,7 +4,7 @@ from __future__ import annotations
 
 This module provides a lightweight :func:`detect_registry` helper which attempts
 to infer the most likely package registry for a given file path or piece of
-source code.  The detection is heuristic-based and avoids any network calls so
+source code. The detection is heuristic-based and avoids any network calls so
 it can run prior to probing remote registries.
 """
 
@@ -71,9 +71,8 @@ KEYWORDS = {
     "meteor": {"meteor add", "meteor remove"},
 }
 
-# Weights assigned to different evidence types.  The values are chosen so that
-# a single strong indicator (manifest or extension) yields a confidence above
-# the 0.7 threshold used by the scan logic.
+# Weights assigned to different evidence types.
+# Chosen so that a single strong indicator yields confidence >= 0.7 threshold.
 MANIFEST_WEIGHT = 0.8
 EXTENSION_WEIGHT = 0.7
 KEYWORD_WEIGHT = 0.3
@@ -92,9 +91,8 @@ def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResu
     """Return probable registries for the supplied path or code snippet.
 
     The result is a list of ``(registry, confidence)`` tuples ordered by
-    confidence in descending order.  Confidence values range from ``0`` to ``1``.
+    confidence in descending order. Confidence values range from ``0`` to ``1``.
     """
-
     scores: dict[str, float] = {name: 0.0 for name in MANIFEST_FILES}
     try:
         path = Path(package_path_or_code)  # type: ignore[arg-type]
@@ -149,11 +147,9 @@ def get_top_registry(
 ) -> Optional[RegistryResult]:
     """Return the highest-confidence registry above ``threshold``.
 
-    This helper simply wraps :func:`detect_registry` and returns the first
-    result if its confidence meets ``threshold``.  ``None`` is returned when no
-    registry satisfies the requirement.
+    This helper wraps :func:`detect_registry` and returns the first
+    result if its confidence meets ``threshold``. Returns None otherwise.
     """
-
     results = detect_registry(package_path_or_code)
     if results:
         top_reg, confidence = results[0]
