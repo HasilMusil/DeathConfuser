@@ -85,4 +85,35 @@ class Recon:
         results: List[tuple[str, str]] = []
         async with aiohttp.ClientSession() as session:
             html = await self._fetch(session, url)
-            s
+            if not html:
+                return results
+
+            script_urls = re.findall(r"<script[^>]+src=['\"]([^'\"]+)['\"]", html, re.I)
+            inline_scripts = re.findall(
+                r"<script[^>]*>(.*?)</script>", html, re.I | re.S
+            )
+
+            # also capture simple ".js" references that may be dynamically loaded
+            bundle_refs = BUNDLE_IMPORT_RE.findall(html)
+            for ref in bundle_refs:
+                if ref not in script_urls:
+                    script_urls.append(ref)
+
+            for src in script_urls:
+                full_url = urljoin(url, src)
+                if full_url in seen:
+                    continue
+                seen.add(full_url)
+                code = await self._fetch(session, full_url)
+                for pkg in PACKAGE_RE.findall(code):
+                    if pkg not in seen:
+                        seen.add(pkg)
+                        results.append((pkg, code))
+
+            for code in inline_scripts:
+                for pkg in PACKAGE_RE.findall(code):
+                    if pkg not in seen:
+                        seen.add(pkg)
+                        results.append((pkg, code))
+
+        return results

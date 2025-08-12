@@ -8,7 +8,7 @@ from typing import Set
 
 from ..core.logger import get_logger
 
-__all__ = ["load_module", "MODULES", "typo_variants", "Scanner"]
+__all__ = ["load_module", "MODULES", "typo_variants"]
 
 log = get_logger(__name__)
 
@@ -80,21 +80,21 @@ def typo_variants(name: str) -> Set[str]:
     return {v for v in variants if v and v != name}
 
 
-from .terraform.scanner import Scanner  # noqa: E402
-
 # ---------------------------------------------------------------------------
 # Registry search modules
 # ---------------------------------------------------------------------------
 
 from . import (
-    npm_registry as npm,
-    pypi_registry as pypi,
-    maven_registry as maven,
-    nuget_registry as nuget,
-    composer_registry as composer,
-    rubygems_registry as rubygems,
-    golang_registry as golang,
-    rust_registry as rust,
+    npm,
+    pypi,
+    maven,
+    nuget,
+    composer,
+    rubygems,
+    golang,
+    rust,
+    docker,
+    terraform,
     cpan,
     hackage,
     hexpm,
@@ -113,6 +113,8 @@ MODULES = {
     "rubygems": rubygems,
     "golang": golang,
     "rust": rust,
+    "docker": docker,
+    "terraform": terraform,
     "cpan": cpan,
     "hackage": hackage,
     "hexpm": hexpm,
