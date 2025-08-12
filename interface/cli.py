@@ -65,7 +65,7 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
                 )
 
             if top_reg and top_reg in searchers and confidence >= 0.7:
-                logger.debug("[SCAN] Using targeted registry first...")
+                logger.debug("[SCAN] Using targeted registry: %s", top_reg)
                 try:
                     res = await searchers[top_reg].search_package(pkg)
                 except Exception as exc:  # pragma: no cover - network errors
@@ -80,7 +80,11 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
                     if mod_name != top_reg
                 }
                 if others:
-                    logger.debug("[FALLBACK] Target not found, scanning all...")
+                    logger.debug(
+                        "[FALLBACK] %s → scanning all registries: %s",
+                        pkg,
+                        ", ".join(others.keys()),
+                    )
                     tasks = {
                         mod_name: mod.search_package(pkg)
                         for mod_name, mod in others.items()
@@ -98,6 +102,11 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
                     mod_name: mod.search_package(pkg)
                     for mod_name, mod in searchers.items()
                 }
+                logger.debug(
+                    "[SCAN] %s → scanning all registries: %s",
+                    pkg,
+                    ", ".join(tasks.keys()),
+                )
                 results = await asyncio.gather(
                     *tasks.values(), return_exceptions=True
                 )
