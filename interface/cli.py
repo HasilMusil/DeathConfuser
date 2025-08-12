@@ -28,6 +28,7 @@ from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
 from DeathConfuser.modules import MODULES, load_module
+from DeathConfuser.modules.detect_registry import detect_registry
 
 __all__ = ["main", "run_scan"]
 
@@ -46,13 +47,51 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
     async def scan(url: str):
         pkgs = await recon.scrape_js(url)
         findings = []
-        for pkg in pkgs:
-            for mod_name, scanner in scanners.items():
+        for pkg, context in pkgs:
+            probable = detect_registry(context)
+            if probable:
+                top_reg, confidence = probable[0]
+                logger.debug(
+                    "detected registry %s for %s (confidence %.2f)",
+                    top_reg,
+                    pkg,
+                    confidence,
+                )
+            else:
+                top_reg, confidence = None, 0.0
+
+            if top_reg and top_reg in scanners and confidence >= 0.7:
                 try:
-                    if await scanner.is_unclaimed(pkg):
-                        findings.append({"ecosystem": mod_name, "package": pkg})
+                    unclaimed = await scanners[top_reg].is_unclaimed(pkg)
                 except Exception as exc:  # pragma: no cover - network errors
-                    logger.debug("%s scanner error: %s", mod_name, exc)
+                    logger.debug("%s scanner error: %s", top_reg, exc)
+                    unclaimed = False
+                if unclaimed:
+                    findings.append({"ecosystem": top_reg, "package": pkg})
+                    for mod_name, scanner in scanners.items():
+                        if mod_name == top_reg:
+                            continue
+                        try:
+                            if await scanner.is_unclaimed(pkg):
+                                findings.append({"ecosystem": mod_name, "package": pkg})
+                        except Exception as exc:  # pragma: no cover - network errors
+                            logger.debug("%s scanner error: %s", mod_name, exc)
+                else:
+                    logger.debug("%s found in %s, skipping other registries", pkg, top_reg)
+            else:
+                tasks = {
+                    mod_name: scanner.is_unclaimed(pkg)
+                    for mod_name, scanner in scanners.items()
+                }
+                results = await asyncio.gather(
+                    *tasks.values(), return_exceptions=True
+                )
+                for (mod_name, res) in zip(tasks.keys(), results):
+                    if isinstance(res, Exception):  # pragma: no cover - network
+                        logger.debug("%s scanner error: %s", mod_name, res)
+                    elif res:
+                        findings.append({"ecosystem": mod_name, "package": pkg})
+
         return {"target": url, "findings": findings}
 
     tasks = [lambda url=t: scan(url) for t in targets]
