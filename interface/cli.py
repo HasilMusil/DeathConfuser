@@ -27,7 +27,8 @@ from DeathConfuser.core import init as core_init
 from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
-from DeathConfuser.modules import MODULES, load_module
+from DeathConfuser.modules import MODULES
+from DeathConfuser.modules.detect_registry import get_top_registry
 
 __all__ = ["main", "run_scan"]
 
@@ -39,20 +40,82 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
     targets = load_targets(target_file)
 
     modules = config.data.get("modules", list(MODULES.keys()))
-    scanners = {name: load_module(name).Scanner() for name in modules}
+    searchers = {name: MODULES[name] for name in modules if name in MODULES}
 
     logger = get_logger("scan")
 
     async def scan(url: str):
         pkgs = await recon.scrape_js(url)
         findings = []
-        for pkg in pkgs:
-            for mod_name, scanner in scanners.items():
+        for pkg, context in pkgs:
+            match = get_top_registry(context, 0)
+            if match:
+                top_reg, confidence = match
+                logger.debug(
+                    "[DETECTED] %s → %s (confidence: %.2f)",
+                    pkg,
+                    top_reg,
+                    confidence,
+                )
+            else:
+                top_reg, confidence = None, 0.0
+                logger.debug(
+                    "[DETECTED] %s → unknown (confidence: 0.00)",
+                    pkg,
+                )
+
+            if top_reg and top_reg in searchers and confidence >= 0.7:
+                logger.debug("[SCAN] Using targeted registry: %s", top_reg)
                 try:
-                    if await scanner.is_unclaimed(pkg):
-                        findings.append({"ecosystem": mod_name, "package": pkg})
+                    res = await searchers[top_reg].search_package(pkg)
                 except Exception as exc:  # pragma: no cover - network errors
-                    logger.debug("%s scanner error: %s", mod_name, exc)
+                    logger.debug("%s search error: %s", top_reg, exc)
+                    res = {"exists": True}
+                if res.get("exists"):
+                    continue
+                findings.append({"ecosystem": top_reg, "package": pkg})
+                others = {
+                    mod_name: mod
+                    for mod_name, mod in searchers.items()
+                    if mod_name != top_reg
+                }
+                if others:
+                    logger.debug(
+                        "[FALLBACK] %s → scanning all registries: %s",
+                        pkg,
+                        ", ".join(others.keys()),
+                    )
+                    tasks = {
+                        mod_name: mod.search_package(pkg)
+                        for mod_name, mod in others.items()
+                    }
+                    results = await asyncio.gather(
+                        *tasks.values(), return_exceptions=True
+                    )
+                    for (mod_name, res) in zip(tasks.keys(), results):
+                        if isinstance(res, Exception):  # pragma: no cover - network errors
+                            logger.debug("%s search error: %s", mod_name, res)
+                        elif not res.get("exists"):
+                            findings.append({"ecosystem": mod_name, "package": pkg})
+            else:
+                tasks = {
+                    mod_name: mod.search_package(pkg)
+                    for mod_name, mod in searchers.items()
+                }
+                logger.debug(
+                    "[SCAN] %s → scanning all registries: %s",
+                    pkg,
+                    ", ".join(tasks.keys()),
+                )
+                results = await asyncio.gather(
+                    *tasks.values(), return_exceptions=True
+                )
+                for (mod_name, res) in zip(tasks.keys(), results):
+                    if isinstance(res, Exception):  # pragma: no cover - network
+                        logger.debug("%s search error: %s", mod_name, res)
+                    elif not res.get("exists"):
+                        findings.append({"ecosystem": mod_name, "package": pkg})
+
         return {"target": url, "findings": findings}
 
     tasks = [lambda url=t: scan(url) for t in targets]
