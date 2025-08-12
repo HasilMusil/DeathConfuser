@@ -28,7 +28,7 @@ from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
 from DeathConfuser.modules import MODULES
-from DeathConfuser.modules.detect_registry import detect_registry, get_top_registry
+from DeathConfuser.modules.detect_registry import get_top_registry
 
 __all__ = ["main", "run_scan"]
 
@@ -48,24 +48,23 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
         pkgs = await recon.scrape_js(url)
         findings = []
         for pkg, context in pkgs:
-            probable = detect_registry(context)
-            if probable:
-                log_reg, log_conf = probable[0]
+            match = get_top_registry(context, 0)
+            if match:
+                top_reg, confidence = match
                 logger.debug(
                     "[DETECTED] %s → %s (confidence: %.2f)",
                     pkg,
-                    log_reg,
-                    log_conf,
+                    top_reg,
+                    confidence,
                 )
             else:
+                top_reg, confidence = None, 0.0
                 logger.debug(
                     "[DETECTED] %s → unknown (confidence: 0.00)",
                     pkg,
                 )
 
-            match = get_top_registry(context)
-            if match and match[0] in searchers:
-                top_reg, confidence = match
+            if top_reg and top_reg in searchers and confidence >= 0.7:
                 logger.debug("[SCAN] Using targeted registry first...")
                 try:
                     res = await searchers[top_reg].search_package(pkg)
