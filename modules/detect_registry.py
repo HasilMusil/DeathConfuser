@@ -71,7 +71,8 @@ KEYWORDS = {
     "meteor": {"meteor add", "meteor remove"},
 }
 
-# Weights assigned to different evidence types
+# Weights assigned to different evidence types.
+# Chosen so that a single strong indicator yields confidence >= 0.7 threshold.
 MANIFEST_WEIGHT = 0.8
 EXTENSION_WEIGHT = 0.7
 KEYWORD_WEIGHT = 0.3
@@ -144,7 +145,11 @@ def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResu
 def get_top_registry(
     package_path_or_code: Union[str, Path], threshold: float = 0.7
 ) -> Optional[RegistryResult]:
-    """Return the highest-confidence registry above ``threshold``."""
+    """Return the highest-confidence registry above ``threshold``.
+
+    This helper wraps :func:`detect_registry` and returns the first
+    result if its confidence meets ``threshold``. Returns None otherwise.
+    """
     results = detect_registry(package_path_or_code)
     if results:
         top_reg, confidence = results[0]

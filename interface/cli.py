@@ -51,6 +51,7 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
             match = get_top_registry(context, 0)
             if match:
                 top_reg, confidence = match
+                logger.info("Detected Registry: %s (confidence: %.2f)", top_reg, confidence)
                 logger.debug(
                     "[DETECTED] %s → %s (confidence: %.2f)",
                     pkg,
@@ -74,29 +75,6 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
                 if res.get("exists"):
                     continue
                 findings.append({"ecosystem": top_reg, "package": pkg})
-                others = {
-                    mod_name: mod
-                    for mod_name, mod in searchers.items()
-                    if mod_name != top_reg
-                }
-                if others:
-                    logger.debug(
-                        "[FALLBACK] %s → scanning all registries: %s",
-                        pkg,
-                        ", ".join(others.keys()),
-                    )
-                    tasks = {
-                        mod_name: mod.search_package(pkg)
-                        for mod_name, mod in others.items()
-                    }
-                    results = await asyncio.gather(
-                        *tasks.values(), return_exceptions=True
-                    )
-                    for (mod_name, res) in zip(tasks.keys(), results):
-                        if isinstance(res, Exception):  # pragma: no cover - network errors
-                            logger.debug("%s search error: %s", mod_name, res)
-                        elif not res.get("exists"):
-                            findings.append({"ecosystem": mod_name, "package": pkg})
             else:
                 tasks = {
                     mod_name: mod.search_package(pkg)
