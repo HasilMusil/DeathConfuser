@@ -27,7 +27,7 @@ from DeathConfuser.core import init as core_init
 from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
-from DeathConfuser.modules import MODULES
+from DeathConfuser.modules import MODULES, load_module
 from DeathConfuser.modules.detect_registry import get_top_registry
 
 __all__ = ["main", "run_scan"]
@@ -145,16 +145,13 @@ def main(argv: Optional[list[str]] = None) -> None:
     logger = get_logger("deathconfuser", config.log_file, config.log_level)
     logger.info("DeathConfuser initialized")
 
-
     mode = args.mode
 
     if mode == "web":
         from .webui import run_webui
-
         run_webui(config)
     elif mode == "api":
         from .api import run_api
-
         run_api(config)
     else:
         target_file = args.targets or config.data.get("targets")
@@ -170,7 +167,6 @@ def main(argv: Optional[list[str]] = None) -> None:
         if args.output:
             from pathlib import Path
             from DeathConfuser.reports import ReportExporter
-
             exporter = ReportExporter()
             output = exporter.export_all(
                 {"results": results, "title": "DeathConfuser Report"},

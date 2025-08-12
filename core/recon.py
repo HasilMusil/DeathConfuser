@@ -77,7 +77,7 @@ class Recon:
 
         Each returned tuple contains ``(package, code)``, where ``code`` is the
         JavaScript source (either inline or fetched from a remote script) that
-        referenced the package.  This snippet is passed to registry detection to
+        referenced the package. This snippet is passed to registry detection to
         prioritise which ecosystem to probe first.
         """
 
@@ -145,4 +145,3 @@ class Recon:
                 return []
             pastes = data.get("data", [])
             return [f"https://pastebin.com/{p['id']}" for p in pastes if 'id' in p]
-
