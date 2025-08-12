@@ -72,26 +72,41 @@ class Recon:
 
         return results
 
-    async def scrape_js(self, url: str) -> List[str]:
-        """Fetch scripts from a page and return discovered package references."""
+    async def scrape_js(self, url: str) -> List[tuple[str, str]]:
+        """Fetch scripts from a page and return discovered package references.
 
-        packages: Set[str] = set()
+        Each returned tuple contains ``(package, source)``, where ``source`` is
+        either the script URL or the inline code snippet the package was found
+        in.  This additional context is used by registry detection to prioritise
+        which ecosystem to probe first.
+        """
+
+        seen: Set[str] = set()
+        results: List[tuple[str, str]] = []
         async with aiohttp.ClientSession() as session:
             html = await self._fetch(session, url)
             srcs = re.findall(r'<script[^>]+src=["\'](.*?)["\']', html)
             inline_scripts = re.findall(r'<script[^>]*>(.*?)</script>', html, re.S)
 
             for script in inline_scripts:
-                packages.update(self._extract_packages(script))
-                packages.update(self._extract_bundle_imports(script))
+                pkgs = self._extract_packages(script) | self._extract_bundle_imports(script)
+                for pkg in pkgs:
+                    if pkg not in seen:
+                        seen.add(pkg)
+                        # include script context for detect_registry()
+                        results.append((pkg, script))
 
             for src in srcs:
                 js_url = urljoin(url, src)
                 js = await self._fetch(session, js_url)
-                packages.update(self._extract_packages(js))
-                packages.update(self._extract_bundle_imports(js))
+                pkgs = self._extract_packages(js) | self._extract_bundle_imports(js)
+                for pkg in pkgs:
+                    if pkg not in seen:
+                        seen.add(pkg)
+                        # pass source URL to aid registry detection
+                        results.append((pkg, js_url))
 
-        return sorted(packages)
+        return sorted(results, key=lambda x: x[0])
 
     def _extract_packages(self, text: str) -> Set[str]:
         return set(PACKAGE_RE.findall(text))

@@ -27,7 +27,8 @@ from DeathConfuser.core import init as core_init
 from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
-from DeathConfuser.modules import MODULES, load_module
+from DeathConfuser.modules import MODULES
+from DeathConfuser.modules.detect_registry import detect_registry
 
 __all__ = ["main", "run_scan"]
 
@@ -39,20 +40,91 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
     targets = load_targets(target_file)
 
     modules = config.data.get("modules", list(MODULES.keys()))
-    scanners = {name: load_module(name).Scanner() for name in modules}
+    searchers = {name: MODULES[name] for name in modules if name in MODULES}
 
     logger = get_logger("scan")
 
     async def scan(url: str):
         pkgs = await recon.scrape_js(url)
         findings = []
-        for pkg in pkgs:
-            for mod_name, scanner in scanners.items():
+        for pkg, context in pkgs:
+            probable = detect_registry(context)
+            if probable:
+                top_reg, confidence = probable[0]
+                logger.debug(
+                    "detected registry %s for %s (confidence %.2f)",
+                    top_reg,
+                    pkg,
+                    confidence,
+                )
+            else:
+                top_reg, confidence = None, 0.0
+
+            if top_reg and top_reg in searchers and confidence >= 0.7:
+                logger.debug("querying %s first for %s", top_reg, pkg)
                 try:
-                    if await scanner.is_unclaimed(pkg):
-                        findings.append({"ecosystem": mod_name, "package": pkg})
+                    res = await searchers[top_reg].search_package(pkg)
                 except Exception as exc:  # pragma: no cover - network errors
-                    logger.debug("%s scanner error: %s", mod_name, exc)
+                    logger.debug("%s search error: %s", top_reg, exc)
+                    res = {"exists": True}
+                if res.get("exists"):
+                    logger.debug(
+                        "%s found in %s, skipping other registries", pkg, top_reg
+                    )
+                    continue
+                findings.append({"ecosystem": top_reg, "package": pkg})
+                others = {
+                    mod_name: mod
+                    for mod_name, mod in searchers.items()
+                    if mod_name != top_reg
+                }
+                if others:
+                    logger.debug(
+                        "%s not found in %s, querying remaining registries: %s",
+                        pkg,
+                        top_reg,
+                        ", ".join(others.keys()),
+                    )
+                    tasks = {
+                        mod_name: mod.search_package(pkg)
+                        for mod_name, mod in others.items()
+                    }
+                    results = await asyncio.gather(
+                        *tasks.values(), return_exceptions=True
+                    )
+                    for (mod_name, res) in zip(tasks.keys(), results):
+                        if isinstance(res, Exception):  # pragma: no cover - network errors
+                            logger.debug("%s search error: %s", mod_name, res)
+                        elif not res.get("exists"):
+                            findings.append({"ecosystem": mod_name, "package": pkg})
+            else:
+                if top_reg:
+                    logger.debug(
+                        "confidence %.2f for %s (%s) below threshold or unsupported, querying all: %s",
+                        confidence,
+                        pkg,
+                        top_reg,
+                        ", ".join(searchers.keys()),
+                    )
+                else:
+                    logger.debug(
+                        "no registry detected for %s, querying all: %s",
+                        pkg,
+                        ", ".join(searchers.keys()),
+                    )
+                tasks = {
+                    mod_name: mod.search_package(pkg)
+                    for mod_name, mod in searchers.items()
+                }
+                results = await asyncio.gather(
+                    *tasks.values(), return_exceptions=True
+                )
+                for (mod_name, res) in zip(tasks.keys(), results):
+                    if isinstance(res, Exception):  # pragma: no cover - network
+                        logger.debug("%s search error: %s", mod_name, res)
+                    elif not res.get("exists"):
+                        findings.append({"ecosystem": mod_name, "package": pkg})
+
         return {"target": url, "findings": findings}
 
     tasks = [lambda url=t: scan(url) for t in targets]
