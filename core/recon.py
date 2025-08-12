@@ -75,10 +75,10 @@ class Recon:
     async def scrape_js(self, url: str) -> List[tuple[str, str]]:
         """Fetch scripts from a page and return discovered package references.
 
-        Each returned tuple contains ``(package, source)``, where ``source`` is
-        either the script URL or the inline code snippet the package was found
-        in.  This additional context is used by registry detection to prioritise
-        which ecosystem to probe first.
+        Each returned tuple contains ``(package, code)``, where ``code`` is the
+        JavaScript source (either inline or fetched from a remote script) that
+        referenced the package.  This snippet is passed to registry detection to
+        prioritise which ecosystem to probe first.
         """
 
         seen: Set[str] = set()
@@ -103,8 +103,8 @@ class Recon:
                 for pkg in pkgs:
                     if pkg not in seen:
                         seen.add(pkg)
-                        # pass source URL to aid registry detection
-                        results.append((pkg, js_url))
+                        # provide code context for detect_registry()
+                        results.append((pkg, js))
 
         return sorted(results, key=lambda x: x[0])
 

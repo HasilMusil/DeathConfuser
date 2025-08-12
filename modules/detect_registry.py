@@ -9,7 +9,7 @@ it can run prior to probing remote registries.
 """
 
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 
 # Known manifest files that strongly indicate an ecosystem
 MANIFEST_FILES = {
@@ -142,3 +142,21 @@ def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResu
     ]
     results.sort(key=lambda x: x[1], reverse=True)
     return results
+
+
+def get_top_registry(
+    package_path_or_code: Union[str, Path], threshold: float = 0.7
+) -> Optional[RegistryResult]:
+    """Return the highest-confidence registry above ``threshold``.
+
+    This helper simply wraps :func:`detect_registry` and returns the first
+    result if its confidence meets ``threshold``.  ``None`` is returned when no
+    registry satisfies the requirement.
+    """
+
+    results = detect_registry(package_path_or_code)
+    if results:
+        top_reg, confidence = results[0]
+        if confidence >= threshold:
+            return top_reg, confidence
+    return None

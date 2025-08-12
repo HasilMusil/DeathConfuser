@@ -28,7 +28,7 @@ from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
 from DeathConfuser.modules import MODULES
-from DeathConfuser.modules.detect_registry import detect_registry
+from DeathConfuser.modules.detect_registry import detect_registry, get_top_registry
 
 __all__ = ["main", "run_scan"]
 
@@ -50,27 +50,29 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
         for pkg, context in pkgs:
             probable = detect_registry(context)
             if probable:
-                top_reg, confidence = probable[0]
+                log_reg, log_conf = probable[0]
                 logger.debug(
-                    "detected registry %s for %s (confidence %.2f)",
-                    top_reg,
+                    "[DETECTED] %s → %s (confidence: %.2f)",
                     pkg,
-                    confidence,
+                    log_reg,
+                    log_conf,
                 )
             else:
-                top_reg, confidence = None, 0.0
+                logger.debug(
+                    "[DETECTED] %s → unknown (confidence: 0.00)",
+                    pkg,
+                )
 
-            if top_reg and top_reg in searchers and confidence >= 0.7:
-                logger.debug("querying %s first for %s", top_reg, pkg)
+            match = get_top_registry(context)
+            if match and match[0] in searchers:
+                top_reg, confidence = match
+                logger.debug("[SCAN] Using targeted registry first...")
                 try:
                     res = await searchers[top_reg].search_package(pkg)
                 except Exception as exc:  # pragma: no cover - network errors
                     logger.debug("%s search error: %s", top_reg, exc)
                     res = {"exists": True}
                 if res.get("exists"):
-                    logger.debug(
-                        "%s found in %s, skipping other registries", pkg, top_reg
-                    )
                     continue
                 findings.append({"ecosystem": top_reg, "package": pkg})
                 others = {
@@ -79,12 +81,7 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
                     if mod_name != top_reg
                 }
                 if others:
-                    logger.debug(
-                        "%s not found in %s, querying remaining registries: %s",
-                        pkg,
-                        top_reg,
-                        ", ".join(others.keys()),
-                    )
+                    logger.debug("[FALLBACK] Target not found, scanning all...")
                     tasks = {
                         mod_name: mod.search_package(pkg)
                         for mod_name, mod in others.items()
@@ -98,20 +95,6 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
                         elif not res.get("exists"):
                             findings.append({"ecosystem": mod_name, "package": pkg})
             else:
-                if top_reg:
-                    logger.debug(
-                        "confidence %.2f for %s (%s) below threshold or unsupported, querying all: %s",
-                        confidence,
-                        pkg,
-                        top_reg,
-                        ", ".join(searchers.keys()),
-                    )
-                else:
-                    logger.debug(
-                        "no registry detected for %s, querying all: %s",
-                        pkg,
-                        ", ".join(searchers.keys()),
-                    )
                 tasks = {
                     mod_name: mod.search_package(pkg)
                     for mod_name, mod in searchers.items()
