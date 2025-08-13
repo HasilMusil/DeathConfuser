@@ -72,13 +72,43 @@ class Recon:
 
         return results
 
-    async def scrape_js(self, url: str) -> List[tuple[str, str]]:
-        """Fetch scripts from a page and return discovered package references.
+    # ------------------------------------------------------------------
+    # JavaScript scraping helpers
+    # ------------------------------------------------------------------
 
-        Each returned tuple contains ``(package, code)``, where ``code`` is the
-        JavaScript source (either inline or fetched from a remote script) that
-        referenced the package. This snippet is passed to registry detection to
-        prioritise which ecosystem to probe first.
+    def _extract_packages(self, code: str) -> Set[str]:
+        """Extract probable package names from JavaScript ``code``.
+
+        Parameters
+        ----------
+        code:
+            JavaScript source to analyse.
+
+        Returns
+        -------
+        set[str]
+            Unique package names referenced via ``require`` or ``import``
+            statements.
+        """
+
+        return set(PACKAGE_RE.findall(code))
+
+    def _extract_bundle_imports(self, html: str) -> List[str]:
+        """Return additional ``.js`` references from ``html`` content.
+
+        These references may be dynamically loaded bundles that are not present
+        in ``<script src="">`` tags.
+        """
+
+        return BUNDLE_IMPORT_RE.findall(html)
+
+    async def scrape_js(self, url: str) -> List[tuple[str, str]]:
+        """Fetch scripts from ``url`` and return discovered package references.
+
+        The resulting list contains ``(package, code)`` tuples where ``code`` is
+        the JavaScript snippet referencing the package.  This snippet is
+        forwarded to registry detection to help infer the appropriate ecosystem
+        during scanning.
         """
 
         seen: Set[str] = set()
@@ -93,9 +123,7 @@ class Recon:
                 r"<script[^>]*>(.*?)</script>", html, re.I | re.S
             )
 
-            # also capture simple ".js" references that may be dynamically loaded
-            bundle_refs = BUNDLE_IMPORT_RE.findall(html)
-            for ref in bundle_refs:
+            for ref in self._extract_bundle_imports(html):
                 if ref not in script_urls:
                     script_urls.append(ref)
 
@@ -105,13 +133,13 @@ class Recon:
                     continue
                 seen.add(full_url)
                 code = await self._fetch(session, full_url)
-                for pkg in PACKAGE_RE.findall(code):
+                for pkg in self._extract_packages(code):
                     if pkg not in seen:
                         seen.add(pkg)
                         results.append((pkg, code))
 
             for code in inline_scripts:
-                for pkg in PACKAGE_RE.findall(code):
+                for pkg in self._extract_packages(code):
                     if pkg not in seen:
                         seen.add(pkg)
                         results.append((pkg, code))
