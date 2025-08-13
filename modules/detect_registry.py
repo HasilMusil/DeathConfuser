@@ -81,19 +81,36 @@ RegistryResult = Tuple[str, float]
 
 
 def _check_keywords(text: str, scores: dict[str, float]) -> None:
+    """Increase scores based on keyword matches within ``text``."""
+
     text = text.lower()
     for reg, words in KEYWORDS.items():
         if any(word in text for word in words):
             scores[reg] += KEYWORD_WEIGHT
 
 
-def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResult]:
+def detect_registry(
+    package_path_or_code: Union[str, Path], extension: Optional[str] = None
+) -> List[RegistryResult]:
     """Return probable registries for the supplied path or code snippet.
 
-    The result is a list of ``(registry, confidence)`` tuples ordered by
-    confidence in descending order. Confidence values range from ``0`` to ``1``.
+    Parameters
+    ----------
+    package_path_or_code:
+        A path to a file or directory or a raw source code string.
+    extension:
+        Optional file extension hint used when ``package_path_or_code`` is raw
+        code rather than a real file.  It should include the leading ``.``.
+
+    Returns
+    -------
+    list[tuple[str, float]]
+        Ordered ``(registry, confidence)`` tuples sorted by confidence in
+        descending order.  Confidence values range from ``0`` to ``1``.
     """
+
     scores: dict[str, float] = {name: 0.0 for name in MANIFEST_FILES}
+
     try:
         path = Path(package_path_or_code)  # type: ignore[arg-type]
     except TypeError:
@@ -103,8 +120,15 @@ def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResu
         try:
             if path.is_dir():
                 for reg, patterns in MANIFEST_FILES.items():
-                    if any(path.glob(pattern) for pattern in patterns):
+                    matched = [p for pat in patterns for p in path.glob(pat)]
+                    if matched:
                         scores[reg] += MANIFEST_WEIGHT
+                        # also inspect manifest contents for keywords
+                        for mf in matched:
+                            try:
+                                _check_keywords(mf.read_text(errors="ignore"), scores)
+                            except OSError:
+                                continue
                 # inspect README-like files for keywords
                 for readme in path.glob("README*"):
                     try:
@@ -118,8 +142,14 @@ def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResu
                     scores[reg] += EXTENSION_WEIGHT
                 parent = path.parent
                 for reg_name, patterns in MANIFEST_FILES.items():
-                    if any(parent.glob(pattern) for pattern in patterns):
+                    matched = [p for pat in patterns for p in parent.glob(pat)]
+                    if matched:
                         scores[reg_name] += MANIFEST_WEIGHT
+                        for mf in matched:
+                            try:
+                                _check_keywords(mf.read_text(errors="ignore"), scores)
+                            except OSError:
+                                continue
                 try:
                     _check_keywords(path.read_text(errors="ignore"), scores)
                 except OSError:
@@ -129,7 +159,7 @@ def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResu
     else:
         # treat input as code or a path string which does not exist locally
         text = str(package_path_or_code)
-        ext = Path(text).suffix.lower()
+        ext = (extension or Path(text).suffix).lower()
         regs = EXTENSIONS.get(ext, set())
         for reg in regs:
             scores[reg] += EXTENSION_WEIGHT
@@ -143,14 +173,30 @@ def detect_registry(package_path_or_code: Union[str, Path]) -> List[RegistryResu
 
 
 def get_top_registry(
-    package_path_or_code: Union[str, Path], threshold: float = 0.7
+    package_path_or_code: Union[str, Path],
+    *,
+    extension: Optional[str] = None,
+    threshold: float = 0.7,
 ) -> Optional[RegistryResult]:
     """Return the highest-confidence registry above ``threshold``.
 
-    This helper wraps :func:`detect_registry` and returns the first
-    result if its confidence meets ``threshold``. Returns None otherwise.
+    Parameters
+    ----------
+    package_path_or_code:
+        Path or code snippet to analyse.
+    extension:
+        Optional extension hint used when ``package_path_or_code`` is code.
+    threshold:
+        Minimum confidence score required to return a registry.
+
+    Returns
+    -------
+    Optional[tuple[str, float]]
+        ``(registry, confidence)`` if the top score exceeds ``threshold``;
+        otherwise ``None``.
     """
-    results = detect_registry(package_path_or_code)
+
+    results = detect_registry(package_path_or_code, extension=extension)
     if results:
         top_reg, confidence = results[0]
         if confidence >= threshold:

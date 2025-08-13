@@ -28,7 +28,7 @@ from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
 from DeathConfuser.modules import MODULES
-from DeathConfuser.modules.detect_registry import detect_registry
+from DeathConfuser.modules.detect_registry import detect_registry, get_top_registry
 
 __all__ = ["main", "run_scan"]
 
@@ -48,27 +48,31 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
         pkgs = await recon.scrape_js(url)
         findings = []
         for pkg, context in pkgs:
-            results = detect_registry(context)
+            # run detection for logging and targeting
+            results = detect_registry(context, extension=".js")
             if results:
-                top_reg, confidence = results[0]
+                detected_name, detected_conf = results[0]
                 logger.info(
-                    "Detected Registry: %s (confidence: %.2f)", top_reg, confidence
+                    "Detected Registry: %s (confidence: %.2f)",
+                    detected_name,
+                    detected_conf,
                 )
                 logger.debug(
                     "[DETECTED] %s → %s (confidence: %.2f)",
                     pkg,
-                    top_reg,
-                    confidence,
+                    detected_name,
+                    detected_conf,
                 )
             else:
-                top_reg, confidence = None, 0.0
+                detected_name, detected_conf = None, 0.0
                 logger.info("Detected Registry: unknown (confidence: 0.00)")
                 logger.debug(
-                    "[DETECTED] %s → unknown (confidence: 0.00)",
-                    pkg,
+                    "[DETECTED] %s → unknown (confidence: 0.00)", pkg
                 )
 
-            if top_reg and top_reg in searchers and confidence >= 0.7:
+            top = get_top_registry(context, extension=".js")
+            if top and top[0] in searchers:
+                top_reg, confidence = top
                 logger.debug("[SCAN] Using targeted registry: %s", top_reg)
                 try:
                     res = await searchers[top_reg].search_package(pkg)
@@ -99,24 +103,25 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
                             logger.debug("%s search error: %s", mod_name, res)
                         elif not res.get("exists"):
                             findings.append({"ecosystem": mod_name, "package": pkg})
-            else:
-                tasks = {
-                    mod_name: mod.search_package(pkg)
-                    for mod_name, mod in searchers.items()
-                }
-                logger.debug(
-                    "[SCAN] %s → scanning all registries: %s",
-                    pkg,
-                    ", ".join(tasks.keys()),
-                )
-                results = await asyncio.gather(
-                    *tasks.values(), return_exceptions=True
-                )
-                for (mod_name, res) in zip(tasks.keys(), results):
-                    if isinstance(res, Exception):  # pragma: no cover - network
-                        logger.debug("%s search error: %s", mod_name, res)
-                    elif not res.get("exists"):
-                        findings.append({"ecosystem": mod_name, "package": pkg})
+                continue
+
+            # no confident registry or not supported -> scan all registries
+            tasks = {
+                mod_name: mod.search_package(pkg) for mod_name, mod in searchers.items()
+            }
+            logger.debug(
+                "[SCAN] %s → scanning all registries: %s",
+                pkg,
+                ", ".join(tasks.keys()),
+            )
+            results = await asyncio.gather(
+                *tasks.values(), return_exceptions=True
+            )
+            for (mod_name, res) in zip(tasks.keys(), results):
+                if isinstance(res, Exception):  # pragma: no cover - network
+                    logger.debug("%s search error: %s", mod_name, res)
+                elif not res.get("exists"):
+                    findings.append({"ecosystem": mod_name, "package": pkg})
 
         return {"target": url, "findings": findings}
 
