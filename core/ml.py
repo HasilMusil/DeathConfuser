@@ -9,26 +9,33 @@ from typing import Any, Dict, List
 
 MODEL_DIR = Path(__file__).resolve().parent.parent / "ml_models"
 
-# Try sklearn first; if unavailable, fall back to minimal JSON-based heuristics
-try:  # pragma: no cover
+# Optional sklearn support.  The JSON models in this repository are
+# deliberately minimal; they generally do not ship with full vectorizer or
+# coefficient data.  Attempting to bootstrap real sklearn models from these
+# files would result in runtime errors (e.g. empty vocabularies).  To keep the
+# code lightweight and robust we therefore only enable sklearn integration if
+# the library is available *and* the model files contain the necessary fields.
+try:  # pragma: no cover - optional dependency
     from sklearn.feature_extraction.text import CountVectorizer
     from sklearn.linear_model import LogisticRegression, LinearRegression
     from sklearn.pipeline import Pipeline
     import numpy as np
-    SKLEARN = True
+    SKLEARN_AVAILABLE = True
 except Exception:  # pragma: no cover
-    SKLEARN = False
-    # Optional fallback custom classes if available
-    try:
-        from ml_training.models import (
-            SeverityModel,
-            PackageModel,
-            PayloadModel,
-            OpsecModel,
-            PriorityModel,
-        )
-    except ImportError:
-        SeverityModel = PackageModel = PayloadModel = OpsecModel = PriorityModel = None
+    SKLEARN_AVAILABLE = False
+
+# Optional fallback custom classes if available.  These provide trivial
+# ``predict`` implementations used in tests when sklearn is absent.
+try:  # pragma: no cover - best effort imports
+    from ml_training.models import (
+        SeverityModel,
+        PackageModel,
+        PayloadModel,
+        OpsecModel,
+        PriorityModel,
+    )
+except Exception:  # pragma: no cover - models are optional
+    SeverityModel = PackageModel = PayloadModel = OpsecModel = PriorityModel = None
 
 
 @lru_cache()
@@ -43,23 +50,32 @@ def _load_model(name: str) -> Any:
     with open(json_path) as fh:
         data = json.load(fh)
 
-    if not SKLEARN:
-        # Use simple JSON dict logic or minimal class
-        if name == "severity" and SeverityModel:
-            return SeverityModel()
+    # Many of the JSON files simply contain mapping dictionaries.  If we detect
+    # that the data lacks a proper model or vocabulary we return the raw data so
+    # that helper functions can operate on it directly.
+    if (
+        not SKLEARN_AVAILABLE
+        or "model" not in data
+        or not data.get("vectorizer", {}).get("vocab")
+    ):
+        # Use lightweight fallback models when available
         if name == "package" and PackageModel:
             return PackageModel()
         if name == "payload" and PayloadModel:
             return PayloadModel(data.get("mapping", {}))
-        if name == "opsec" and OpsecModel:
+        if name.startswith("opsec") and OpsecModel:
             return OpsecModel(data.get("mapping", {}))
         if name == "target" and PriorityModel:
             coef = data.get("model", {}).get("coef", [0])
             intercept = data.get("model", {}).get("intercept", 0)
             return PriorityModel(coef[0], intercept)
+        # Extract nested mapping dictionaries for convenience
+        if "mapping" in data:
+            return data["mapping"]
         return data
 
-    # Sklearn loading
+    # At this point we have sklearn available and the JSON file contains the
+    # required fields to reconstruct a simple model.
     if name == "target":
         model = LinearRegression()
         model.coef_ = np.array(data["model"]["coef"])  # type: ignore
@@ -97,25 +113,32 @@ def predict_package_variants(name: str, top_n: int = 3) -> List[str]:
         probs = model.predict_proba([name])[0]
         labels = getattr(model, "classes_", [])
         pairs = sorted(zip(probs, labels), reverse=True)[:top_n]
-        return [VARIANT_MAP.get(lbl, lambda b: b)(name) for _, lbl in pairs]
+        variants = [VARIANT_MAP.get(lbl, lambda b: b)(name) for _, lbl in pairs]
+        variants.extend([name, name.replace("_", "-"), name.replace("-", "_")])
+        return sorted(set(variants))
     # JSON fallback
     variants = {name}
     if isinstance(model, dict):
         variants.update(model.get(name, []))
+    else:
+        extra = _load_model("name_variants")
+        if isinstance(extra, dict):
+            variants.update(extra.get(name, []))
     variants.add(name.replace("_", "-"))
     variants.add(name.replace("-", "_"))
     return sorted(variants)
 
 
 def classify_callback_severity(event: Dict[str, Any]) -> str:
-    model = _load_model("severity")
-    if hasattr(model, "predict"):
+    mapping = _load_model("severity")
+    if SeverityModel:
         text = str(event.get("message", ""))
-        return model.predict([text])[0]
-    # JSON fallback
-    if isinstance(model, dict):
+        sev = SeverityModel().predict([text])[0]
+        if sev != "info":
+            return sev
+    if isinstance(mapping, dict):
         text = json.dumps(event).lower()
-        for keyword, sev in model.items():
+        for keyword, sev in mapping.items():
             if keyword.lower() in text:
                 return sev
     return "info"
@@ -131,7 +154,11 @@ def select_payload_for_stack(stack: str) -> str:
 
 
 def adjust_opsec_behavior(context: Dict[str, Any]) -> Dict[str, Any]:
-    model = _load_model("opsec")
+    """Adjust behaviour based on OPSEC risk profile."""
+
+    model = _load_model("opsec_model") or _load_model("opsec")
+    delay_conf = _load_model("opsec")
+
     if hasattr(model, "predict"):
         behavior = model.predict([context.get("risk", "low")])[0]
         profile = dict(context)
@@ -145,12 +172,15 @@ def adjust_opsec_behavior(context: Dict[str, Any]) -> Dict[str, Any]:
             profile["delay"] = min(profile.get("delay", 1), 0.1)
             profile["user_agent"] = "Aggressive/1.0"
         profile["behavior"] = behavior
-        return profile
-    # JSON fallback
-    if isinstance(model, dict):
-        delay = context.get("delay", 0) + model.get("delay_adjust", 0)
-        return {**context, "delay": delay}
-    return context
+    elif isinstance(model, dict):
+        behavior = model.get(context.get("risk", "low"), "balanced")
+        profile = {**context, "behavior": behavior}
+    else:
+        profile = dict(context)
+
+    if isinstance(delay_conf, dict):
+        profile["delay"] = profile.get("delay", 0) + delay_conf.get("delay_adjust", 0)
+    return profile
 
 
 def score_target_priority(target: str) -> float:
@@ -158,6 +188,10 @@ def score_target_priority(target: str) -> float:
     if hasattr(model, "predict"):
         return float(model.predict([[len(target)]])[0])
     if isinstance(model, dict):
+        if "coef" in model.get("model", {}):
+            coef = model["model"].get("coef", [0])[0]
+            intercept = model["model"].get("intercept", 0)
+            return float(coef * len(target) + intercept)
         return float(model.get(target, len(target)))
     return float(len(target))
 

