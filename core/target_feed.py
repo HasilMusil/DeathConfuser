@@ -8,6 +8,7 @@ from typing import List, Dict
 import aiohttp
 
 from .logger import get_logger
+from .ml import score_target_priority
 
 log = get_logger(__name__)
 
@@ -51,7 +52,8 @@ async def fetch_targets() -> List[str]:
             url = item.get("target") or item.get("url")
             if url:
                 targets.append(str(url))
-    return sorted(set(targets))
+    uniq = sorted(set(targets))
+    return sorted(uniq, key=score_target_priority, reverse=True)
 
 
 async def update_target_file(path: str | Path) -> Path:

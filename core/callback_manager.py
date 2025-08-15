@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from .logger import get_logger
+from .ml import classify_callback_severity
 
 log = get_logger(__name__)
 
@@ -28,7 +29,17 @@ class CallbackManager:
         self.events: List[CallbackEvent] = []
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-    def record(self, target: str, registry: str, program: str, severity: str, data: dict) -> None:
+    def record(
+        self,
+        target: str,
+        registry: str,
+        program: str,
+        severity: Optional[str] = None,
+        data: Optional[dict] = None,
+    ) -> None:
+        data = data or {}
+        if severity is None:
+            severity = classify_callback_severity(data)
         event = CallbackEvent(target, registry, program, severity, data)
         self.events.append(event)
         log.info("callback from %s via %s", target, registry)

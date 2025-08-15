@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from ..core.logger import get_logger
+from ..core.ml import adjust_opsec_behavior
 
 
 @dataclass
@@ -78,10 +79,15 @@ class InfraManager:
         version = f"0.{random.randint(0,9)}.{random.randint(0,9)}"
         delay = random.uniform(0.5, 2.0)
         await asyncio.sleep(0)  # allow scheduling
-        return {
+        profile = {
             "name": name,
             "email": email,
             "user_agent": user_agent,
             "version": version,
             "delay": delay,
         }
+        return adjust_opsec_behavior(profile)
+
+    async def rotate_identity(self) -> dict:
+        """Force generation of a new identity mid run."""
+        return await self.generate_burner_identity()
