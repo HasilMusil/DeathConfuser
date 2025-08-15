@@ -4,7 +4,18 @@ from __future__ import annotations
 from typing import Dict, List
 
 
-async def build_chain(vuln: Dict[str, str]) -> List[str]:
-    """Return a sequence of exploitation steps."""
-    target = vuln.get("target", "unknown")
-    return [f"leverage {vuln.get('package', 'pkg')} on {target}", "pivot to ci/cd", "achieve rce"]
+class ChainBuilder:
+    """Construct exploitation chains based on vulnerability details."""
+
+    async def build(self, vuln: Dict[str, str]) -> List[str]:
+        """Return a sequence of exploitation steps."""
+        target = vuln.get("target", "unknown")
+        package = vuln.get("package", vuln.get("vuln", "pkg"))
+        return [
+            f"leverage {package} on {target}",
+            "pivot to CI/CD",
+            "achieve RCE",
+        ]
+
+
+__all__ = ["ChainBuilder"]

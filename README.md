@@ -52,6 +52,16 @@ Originally designed for **Bug Bounty Hunters, Red Teams, and Offensive Security 
 
 ---
 
+## 🔥 DeathConfuser++ v3 Highlights
+
+- **Recon Engine v2** with GitHub/GitLab scraping, registry correlation and ML assisted package prediction.
+- **ML Core** offering package variant prediction, severity classification and target prioritisation.
+- **Asynchronous listener** with automatic Interactsh style domains.
+- **Dynamic runtime payloads** exfiltrating CI/CD metadata and secrets.
+- **Registry monitor & chain hunter modes** for continuous takeover attempts.
+- **Plugin SDK** and **simulation environment** for rapid extension and testing.
+- **Artifact manager** and multi-channel notifications (Slack, Discord, Telegram, Email).
+
 ## 📂 Project Structure
 
 ```

@@ -1,14 +1,19 @@
-"""Example plugin using the API."""
+"""Example plugin implementation."""
 from __future__ import annotations
 
-from .plugin_api import register
+from .plugin_api import Plugin
 
 
-class ExamplePlugin:
+class ExamplePlugin(Plugin):
     name = "example"
 
-    async def run(self) -> None:
-        return None
+    async def scan(self, *args, **kwargs):
+        """Dummy scan method."""
+        return ["pkg1"]
+
+    async def publish(self, *args, **kwargs):
+        """Dummy publish method."""
+        return True
 
 
-register(ExamplePlugin())
+__all__ = ["ExamplePlugin"]

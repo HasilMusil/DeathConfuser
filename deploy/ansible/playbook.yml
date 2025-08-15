@@ -1,1 +1,7 @@
-# Ansible playbook placeholder
+---
+# Placeholder Ansible playbook for DeathConfuser setup.
+- hosts: all
+  tasks:
+    - name: Setup placeholder
+      debug:
+        msg: "Setup placeholder"

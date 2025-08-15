@@ -1,10 +1,4 @@
-"""Temporary infrastructure manager used for OPSEC testing.
-
-This module simulates the creation of throwaway infrastructure used for
-callbacks or staging servers. It does not actually allocate resources
-but mimics an API call to a VPS provider so the rest of the framework
-can operate as if real infrastructure were provisioned.
-"""
+"""Temporary infrastructure manager used for OPSEC testing."""
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +8,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from ..core.logger import get_logger
-from ..core import ml
+from ..core.ml import adjust_opsec_behavior
 
 
 @dataclass
@@ -37,7 +31,6 @@ class InfraManager:
         ip = f"192.0.2.{random.randint(2, 254)}"
         self.current = Infra(domain=domain, ip=ip)
         self.log.info("Provisioned temporary infra %s (%s)", domain, ip)
-        # Simulate an external API call latency
         await asyncio.sleep(0.5)
         return self.current
 
@@ -49,7 +42,7 @@ class InfraManager:
         return domain
 
     async def deploy_callback(self, service: str = "http") -> str:
-        """Simulate deployment of a callback service (e.g. Interactsh)."""
+        """Simulate deployment of a callback service."""
         if not self.current:
             await self.provision()
         await asyncio.sleep(0.2)
@@ -66,19 +59,14 @@ class InfraManager:
         self.current = None
 
     async def generate_burner_identity(self) -> dict:
-        """Generate or rotate a disposable identity for publishing."""
+        """Generate a disposable identity for publishing."""
         name = f"user-{uuid.uuid4().hex[:6]}"
-        domain = random.choice([
-            "mailinator.com",
-            "example.net",
-            "tempmail.com",
-        ])
+        domain = random.choice(["mailinator.com", "example.net", "tempmail.com"])
         email = f"{name}@{domain}"
-        user_agent = random.choice([
-            "Mozilla/5.0", "curl/7.88.1", "Wget/1.21.1",
-        ])
+        user_agent = random.choice(["Mozilla/5.0", "curl/7.88.1", "Wget/1.21.1"])
         version = f"0.{random.randint(0,9)}.{random.randint(0,9)}"
         delay = random.uniform(0.5, 2.0)
+        await asyncio.sleep(0)  # allow scheduling
         profile = {
             "name": name,
             "email": email,
@@ -86,11 +74,13 @@ class InfraManager:
             "version": version,
             "delay": delay,
         }
-        profile = ml.adjust_opsec_behavior(profile)
-        await asyncio.sleep(0)
+        profile = adjust_opsec_behavior(profile)
         self.identity = profile
         return profile
 
     async def rotate_identity(self) -> dict:
-        """Rotate the current identity during a run."""
+        """Force generation of a new identity mid-run."""
         return await self.generate_burner_identity()
+
+
+__all__ = ["InfraManager", "Infra"]

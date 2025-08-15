@@ -29,9 +29,15 @@ class CallbackManager:
         self.events: List[CallbackEvent] = []
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-    def record(self, target: str, registry: str, program: str, severity: Optional[str] = None, data: Optional[dict] = None) -> None:
-        if data is None:
-            data = {}
+    def record(
+        self,
+        target: str,
+        registry: str,
+        program: str,
+        severity: Optional[str] = None,
+        data: Optional[dict] = None,
+    ) -> None:
+        data = data or {}
         if severity is None:
             severity = classify_callback_severity(data)
         event = CallbackEvent(target, registry, program, severity, data)
