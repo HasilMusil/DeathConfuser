@@ -2,6 +2,9 @@
 threads: 20
 opsec:
   jitter: false
+  burner_accounts: true
+  random_user_agent: true
+  random_versions: true
 callbacks:
   interactsh: true
   dns: true

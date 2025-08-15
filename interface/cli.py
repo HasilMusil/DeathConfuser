@@ -25,6 +25,7 @@ from DeathConfuser.core.config import Config
 from DeathConfuser.core.logger import get_logger
 from DeathConfuser.core import init as core_init
 from DeathConfuser.core.targets import load_targets
+from DeathConfuser.core.target_feed import update_target_file
 from DeathConfuser.core.recon import Recon
 from DeathConfuser.core.concurrency import run_tasks
 from DeathConfuser.modules import MODULES
@@ -37,6 +38,7 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
     """Perform a scan of the supplied targets with the given configuration."""
 
     recon = Recon()
+    await update_target_file(target_file)
     targets = load_targets(target_file)
 
     modules = config.data.get("modules", list(MODULES.keys()))
@@ -144,6 +146,12 @@ def main(argv: Optional[list[str]] = None) -> None:
         default="cli",
         help="Run as CLI, API or Web dashboard",
     )
+    parser.add_argument(
+        "--builder",
+        choices=["template", "dynamic"],
+        default="template",
+        help="Payload builder to use",
+    )
     parser.add_argument("-c", "--config", help="Path to config file")
     args = parser.parse_args(argv)
 
@@ -151,6 +159,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     core_init(args.config, args.preset)
     logger = get_logger("deathconfuser", config.log_file, config.log_level)
     logger.info("DeathConfuser initialized")
+    config.data["payload_builder"] = args.builder
 
     mode = args.mode
 

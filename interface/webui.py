@@ -9,6 +9,7 @@ from typing import List, Dict
 
 from ..core.config import Config
 from ..core.logger import get_logger
+from ..core.callback_manager import MANAGER as CALLBACKS
 from .cli import run_scan
 
 
@@ -28,7 +29,7 @@ def _collect_results(task: asyncio.Task) -> None:
 
 
 @app.get("/")
-async def dashboard() -> HTMLResponse:
+async def dashboard(request: Request) -> HTMLResponse:
     """Simple dashboard with current status and log tail."""
     if CONFIG and CONFIG.log_file:
         try:
@@ -40,17 +41,25 @@ async def dashboard() -> HTMLResponse:
     else:
         log_html = ""
     running = SCAN_TASK is not None and not SCAN_TASK.done()
+    severity = request.query_params.get("severity")
+    callbacks = CALLBACKS.list(severity)
+    cb_html = "<br>".join(
+        f"<span class='sev-{c.severity}'>{c.severity}: {c.target} ({c.registry})</span>" for c in callbacks
+    )
     html = f"""<html><body>
     <h1>DeathConfuser WebUI</h1>
     <p>Running: {running}</p>
     <form method='post' action='/start'>
       <input type='text' name='targets' placeholder='targets file'/>
       <input type='text' name='preset' placeholder='preset'/>
+      <input type='text' name='builder' placeholder='builder'/>
       <button type='submit'>Start Scan</button>
     </form>
     <form method='post' action='/stop'>
       <button type='submit'>Stop Scan</button>
     </form>
+    <h2>Callbacks</h2>
+    <div>{cb_html}</div>
     <pre>{log_html}</pre>
     </body></html>"""
     return HTMLResponse(html)
@@ -76,8 +85,11 @@ async def start(request: Request) -> RedirectResponse:
     form = await request.form()
     targets = form.get("targets") or (CONFIG.data.get("targets") if CONFIG else None)
     preset = form.get("preset")
+    builder = form.get("builder")
     if preset and CONFIG:
         CONFIG = Config.load(CONFIG.data.get("config_path"), preset)
+    if builder and CONFIG:
+        CONFIG.data["payload_builder"] = builder
     if not CONFIG or not targets:
         return RedirectResponse("/", status_code=303)
     SCAN_TASK = asyncio.create_task(run_scan(CONFIG, targets))
