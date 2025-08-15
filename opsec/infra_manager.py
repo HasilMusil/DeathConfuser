@@ -62,3 +62,26 @@ class InfraManager:
         self.log.info("Tearing down infra %s", self.current.domain)
         await asyncio.sleep(0.2)
         self.current = None
+
+    async def generate_burner_identity(self) -> dict:
+        """Generate a disposable identity for publishing."""
+        name = f"user-{uuid.uuid4().hex[:6]}"
+        domain = random.choice([
+            "mailinator.com",
+            "example.net",
+            "tempmail.com",
+        ])
+        email = f"{name}@{domain}"
+        user_agent = random.choice([
+            "Mozilla/5.0", "curl/7.88.1", "Wget/1.21.1",
+        ])
+        version = f"0.{random.randint(0,9)}.{random.randint(0,9)}"
+        delay = random.uniform(0.5, 2.0)
+        await asyncio.sleep(0)  # allow scheduling
+        return {
+            "name": name,
+            "email": email,
+            "user_agent": user_agent,
+            "version": version,
+            "delay": delay,
+        }

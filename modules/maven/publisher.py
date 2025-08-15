@@ -7,8 +7,9 @@ import shutil
 from typing import Optional
 
 from ...core.logger import get_logger
+from ...core.concurrency import run_tasks
 from .scanner import Scanner
-from ...opsec import load_profiles
+from ...opsec.infra_manager import InfraManager
 from ...utils.fs_utils import temporary_directory
 
 log = get_logger(__name__)
@@ -22,8 +23,11 @@ async def publish(group: str, artifact: str, payload: str, repository: str = "ht
         log.info("Artifact %s:%s already exists", group, artifact)
         return
 
-    profile = random.choice(load_profiles()) if load_profiles() else {"name": "test", "email": "test@example.com"}
+    infra = InfraManager()
+    profile = await infra.generate_burner_identity()
     log.info("Using identity %s <%s>", profile.get("name"), profile.get("email"))
+    log.debug("UA %s version %s", profile.get("user_agent"), profile.get("version"))
+    await asyncio.sleep(profile.get("delay", 0))
 
     if dry_run or not shutil.which("mvn"):
         log.info("[dry-run] would deploy %s:%s", group, artifact)
@@ -49,3 +53,18 @@ async def publish(group: str, artifact: str, payload: str, repository: str = "ht
             log.info("Deployed %s:%s", group, artifact)
         else:
             log.error("mvn deploy failed: %s", err.decode().strip())
+
+
+async def publish_parallel(packages, limit=5, retries=3, **kwargs):
+    async def _single(pkg):
+        name, payload = pkg
+        backoff = 1
+        for _ in range(retries+1):
+            try:
+                await publish(name, payload, **kwargs)
+                break
+            except Exception:  # pragma: no cover - network errors
+                await asyncio.sleep(backoff)
+                backoff *= 2
+    coros = [lambda p=p: _single(p) for p in packages]
+    await run_tasks(coros, limit=limit)
