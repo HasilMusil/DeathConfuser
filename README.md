@@ -18,81 +18,56 @@ ________                 __  .__    _________                _____
 
 ---
 
-## ⚔️ Introduction
+## Introduction & Purpose
 
-**DeathConfuser** is not just another script — it’s a **full-scale, modular framework** for **supply chain exploitation, CI/CD attacks, and dependency confusion.**
-It automates **recon → payload generation → exploitation → callback verification → reporting**, letting you own pipelines and dependencies with zero manual effort.
+DeathConfuser is a research framework focused on dependency confusion and CI/CD exploitation.
+It automates discovery of package references, probes public registries for unclaimed names, generates
+opsec-aware payloads and verifies execution via multiple callback channels.
 
-Originally designed for **Bug Bounty Hunters, Red Teams, and Offensive Security researchers**, it weaponizes modern software ecosystems against themselves — while keeping you cloaked with **OPSEC-grade stealth features.**
+The project is intended for red‑team exercises and supply‑chain security research.
+It includes interfaces for command‑line usage, a REST API and a small WebUI.
 
-### New in v3
-
-- Recon Engine v2 with GitHub/GitLab integration and ML name prediction
-- Unified ML layer powering payload selection, callback severity and target scoring
-- Auto listener with Interactsh support and dynamic callback endpoints
-- Burner infra rotation and artifact archiving
-- Plugin SDK, registry monitoring mode and chain builder utilities
-- Offline-trainable ML models with `ml_training/` scripts
 
 ---
 
-## 🚀 Feature Matrix
+## Feature Matrix
 
-| Category                     | Highlights                                                                                                      |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 🔍 **Recon**                 | Subdomain discovery, package leaks, typosquat generation, endpoint scraping, JS parser, tech fingerprinting     |
-| 📦 **Dependency Confusion**  | Automatic ecosystem hijacking (`npm`, `pip`, `cargo`, `maven`, etc.), scoped package targeting, namespace abuse |
-| ⚡ **CI/CD Exploitation**     | GitHub Actions, GitLab CI, Jenkins, Travis, CircleCI, DroneCI, TeamCity — fully automated injection & execution |
-| 🧬 **Payload System**        | Jinja2-based polymorphic templates (`setup.py`, `cargo.toml`, `package.json`), adaptive YAML builders           |
-| 🔁 **Callback Verification** | Interactsh, Burp Collaborator, custom webhooks, DNS/HTTP/SMTP listeners for exploit confirmation                |
-| 👻 **OPSEC Engine**          | Proxy rotator, DoH resolvers, sandbox detectors, burner profiles, traffic jitter & padding, log scrubbing       |
-| 📊 **Reporting**             | Export results in **HTML, JSON, Markdown** with timelines, IOCs, exploited hosts, callback metadata             |
-| 🕹 **Interfaces**            | CLI for speed, REST API for automation, and WebUI for dashboards & orchestration                                |
-| 🎯 **Presets**               | `stealth.yaml`, `aggressive.yaml`, `dev.yaml` — swap styles with a single flag                                  |
+| Category                  | Highlights                                                                                                                                                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Recon**                 | Passive subdomain enumeration, JavaScript scraping, GitHub/GitLab search, local file scanning, technology fingerprinting, target feed aggregation                                                                     |
+| **Dependency Confusion**  | Scanner modules for `npm`, `pypi`, `maven`, `nuget`, `composer`, `rubygems`, `golang`, `rust`, `docker`, `terraform`, `cpan`, `hackage`, `hexpm`, `swiftpm`, `cocoapods`, `conda`, `meteor` with typosquat generation |
+| **CI/CD Injection**       | Injects GitHub Actions workflows, GitLab CI jobs and Jenkins steps (`integrations/ci_injector.py`)                                                                                                                    |
+| **Payload System**        | Jinja2 templates, dynamic builders extracting environment secrets, optional obfuscation (base64/xor/timing)                                                                                                           |
+| **Callback Verification** | HTTP listener, DNS over HTTPS lookups, optional Interactsh/Burp endpoints, callback classification and correlation                                                                                                    |
+| **OPSEC Toolkit**         | Proxy rotation with Tor support, DNS-over-HTTPS resolver, sandbox detection heuristics, disposable infrastructure & burner identities                                                                                 |
+| **Machine Learning**      | Package variant prediction, payload selection, callback severity classification, OPSEC behaviour adjustment, target priority scoring                                                                                  |
+| **Reporting**             | Export findings in **HTML**, **JSON** and **Markdown** using Jinja2 templates                                                                                                                                         |
+| **Interfaces**            | CLI (`--mode cli`), REST API (`--mode api`) and WebUI (`--mode web`)                                                                                                                                                  |
+| **Extensibility**         | Plugin system, simulation environment, configurable presets                                                                                                                                                           |
 
 ---
 
-## 🔥 DeathConfuser++ v3 Highlights
-
-- **Recon Engine v2** with GitHub/GitLab scraping, registry correlation and ML assisted package prediction.
-- **ML Core** offering package variant prediction, severity classification and target prioritisation.
-- **Asynchronous listener** with automatic Interactsh style domains.
-- **Dynamic runtime payloads** exfiltrating CI/CD metadata and secrets.
-- **Registry monitor & chain hunter modes** for continuous takeover attempts.
-- **Plugin SDK** and **simulation environment** for rapid extension and testing.
-- **Artifact manager** and multi-channel notifications (Slack, Discord, Telegram, Email).
-
-## 📂 Project Structure
+## Architecture Overview
 
 ```
 DeathConfuser/
- ├── deathconfuser.py        # Main entrypoint
- ├── core/                   # Config, recon, logger, concurrency, proxy
- ├── modules/                # Exploit modules per ecosystem
- │    ├── npm/
- │    ├── pypi/
- │    ├── cargo/
- │    ├── maven/
- │    ├── composer/
- │    ├── docker/
- │    ├── nuget/
- │    ├── rubygems/
- │    ├── terraform/
- │    └── golang/
- ├── payloads/               # Jinja2 templates + builder
- ├── opsec/                  # Proxy rotation, sandbox detector, DoH, burners
- ├── reports/                # HTML, JSON, Markdown exporters
- ├── integrations/           # GitHub/GitLab API, CI injectors, Slack, webhooks
- ├── interfaces/             # CLI, REST API, WebUI
- ├── presets/                # Stealth / aggressive / dev configs
- └── utils/                  # fs_utils, js_parser, urltools, wordlists
+├── deathconfuser.py        – entry point
+├── core/                   – recon, ML, callback, concurrency, proxy, config
+├── integrations/           – GitHub/GitLab APIs, CI injectors, notifications
+├── modules/                – ecosystem scanners, payloads and publishers
+├── payloads/               – Jinja2 templates and dynamic builders
+├── opsec/                  – proxy rotator, DoH resolver, sandbox detector
+├── reports/                – export utilities & templates
+├── interface/              – CLI, REST API, WebUI
+├── presets/                – configurable profiles
+├── plugins/                – plugin API and examples
+├── ml_models/              – JSON ML models
+└── ml_training/            – training scripts & datasets
 ```
 
 ---
 
-## ⚡ Quickstart Guide
-
-### 1️⃣ Install
+## Installation
 
 ```bash
 git clone https://github.com/HasilMusil/DeathConfuser.git
@@ -108,226 +83,211 @@ python ml_training/train_models.py
 
 Generates updated `.json` model files in `ml_models/` using the synthetic datasets in `ml_training/data/`.
 
-### 2️⃣ Recon a Target
+## Quickstart Examples
 
-```bash
-python3 deathconfuser.py --mode recon --target example.com
+### Recon
+
+```
+python deathconfuser.py --mode cli --targets targets.txt --preset recon-only
+```
++ Uses the configured recon engine (Recon by default, ReconEngineV2 when recon_v2: true).
+
+
+### Exploitation Scan
+
+```
+python deathconfuser.py --mode cli --preset stealth --targets targets.txt --builder template --output reports
+```
++ Scrapes targets, detects unclaimed packages across enabled modules and writes reports.
+
+
+### Callback Verification
+
+```
+python deathconfuser.py --mode cli --preset dev --targets targets.txt --builder dynamic
+```
++ Callbacks are recorded in reports/json/callbacks.json
++ Dynamic payloads exfiltrate environment variables to the configured callback endpoints.
+
+
+### Reporting Only
+
+```
+python deathconfuser.py --mode cli --targets targets.txt --output reports
+```
++ Reports generated in reports/{html,json,markdown}/scan.*
+
+---
+
+## Configuration System
+
+Configuration values are layered:
+1. **Default** – `config.yaml` (if present).
+2. **Preset** – YAML file from `presets/` selected via `--preset`.
+3. **Overrides** – `--set key=value` pairs on the CLI.
+
+`core/config.py` exposes:
++ `Config.load(path, preset, overrides)` – merge all layers.
++ `ArgumentParser.parse()` – convenience parser returning a `Config` instance.
++ Deep dot‑notation overrides (`--set recon.mode=aggressive`).
+
+### Example `config.yaml`
+``` yaml
+# logging
+log_level: INFO
+log_file: logs/deathconfuser.log
+
+# default targets file
+targets: targets.txt
+
+# recon behaviour
+recon_v2: true
+recon_mode: stealth
+
+# enabled modules
+modules:
+  - npm
+  - pypi
+  - maven
+
+# async execution limits
+concurrency:
+  limit: 10
+  retries: 1
+  timeout: 30
+
+# callback destinations
+callback:
+  http_url: http://127.0.0.1:8000/
+  dns_domain: cb.example
+
+# preferred payload builder
+payload_builder: template
 ```
 
-### 3️⃣ Run Exploitation
+Any of these can be overridden by presets or `--set`.
 
-```bash
-python3 deathconfuser.py --mode exploit --preset aggressive.yaml
+---
+
+## Presets
+
+| File              | Purpose                                                                      |
+| ----------------- | ---------------------------------------------------------------------------- |
+| `stealth.yaml`    | Low thread count, proxy chain with Tor, delayed callbacks, no auto‑publish   |
+| `aggressive.yaml` | High thread count, all callbacks enabled, automatic publishing and reporting |
+| `dev.yaml`        | Verbose logging, dry‑run, local HTTP listener, outputs to `./debug_reports`  |
+| `recon-only.yaml` | Passive reconnaissance only, no payloads or callbacks                        |
+| `ci-burner.yaml`  | CI focused attacks, enables `ci_injector` and delayed payload execution      |
+
+---
+
+## Interfaces
+
+### CLI
+
+``` css
+python deathconfuser.py --preset <name> --targets <file> [--output DIR] [--builder template|dynamic] [--mode cli|api|web] [-c config.yaml]
 ```
++ `--mode cli` (default) runs a scan and optionally writes reports.
++ `--mode api` starts the REST API.
++ `--mode web` launches the WebUI.
 
-### 4️⃣ Verify Callbacks
+### REST API (`--mode api`)
 
-```bash
-python3 deathconfuser.py --mode verify --collaborator-url xyz.oast.fun
-```
+Endpoints:
++ `POST /start` – JSON body `{ "targets": "...", "preset": "dev" }`
++ `POST /stop` – cancel running scan.
++ `GET /status` – check running state.
++ `GET /results` – retrieve accumulated results.
 
-### 5️⃣ Generate Report
+### WebUI (`--mode web`)
 
-```bash
-python3 deathconfuser.py --report html --output report.html
-```
-
----
-
-## 🕵️ Example Workflow
-
-1. **Recon** finds `internal-npm.example.com` and `requirements.txt` with private deps.
-2. **DeathConfuser** generates typosquat `internal-utils` with backdoored `setup.py`.
-3. Publishes payload to PyPI, pipeline installs it automatically.
-4. **RCE executed** in GitHub Actions → callback logged via Interactsh.
-5. Auto-generates `report.html` with timeline, payload hash, callback data.
+Minimal FastAPI dashboard:
++ Shows running status and tail of log file.
++ Form to start/stop scans and select preset or builder.
++ Displays recorded callbacks with severity filtering.
 
 ---
 
-### 🔎 How Config Works in DeathConfuser
+## OPSEC Toolkit
 
-* **Main config file:** `config.yaml`
-* **Presets folder:** `presets/` (e.g. `dev.yaml`, `stealth.yaml`, `aggressive.yaml`)
-* Config loader merges:
-
-  1. **Global defaults** (`config.yaml`)
-  2. **Preset file** (if specified)
-  3. **CLI overrides** (`--set key=value`)
-
-So your config is **layered** → global defaults → preset → CLI flags.
-
----
-
-## 📂 Example `config.yaml`
-
-```yaml
-# 🌍 Global configuration for DeathConfuser
-
-# Logging
-log_level: INFO               # DEBUG / INFO / WARNING / ERROR
-log_file: deathconfuser.log   # Log file path
-
-# Default preset if none specified in CLI
-default_preset: dev
-
-# Recon settings
-recon:
-  wordlist: utils/wordlists/common.txt   # Wordlist for subdomain/pkg hunting
-  threads: 10                            # Concurrency for recon
-  timeout: 10                            # Request timeout
-  user_agents:                           # Randomized UA pool
-    - Mozilla/5.0 (Windows NT 10.0; Win64; x64)
-    - curl/7.88.0
-    - Wget/1.21.3
-
-# Exploitation settings
-exploit:
-  package_managers:
-    - npm
-    - pip
-    - cargo
-    - maven
-  auto_publish: true         # Push poisoned package automatically
-  verify_callback: true      # Require callback verification
-  callback_url: https://xyz.oast.fun
-
-# Payload system
-payloads:
-  polymorphic: true          # Enable randomized polymorphic payloads
-  builder: jinja2            # Template engine
-  stealth_sleep: 5-15        # Random sleep for sandbox evasion
-
-# OPSEC / Privacy
-opsec:
-  proxy_rotation: true
-  proxy_list: proxies.txt    # File containing proxy list
-  doh_resolver: https://dns.google/dns-query
-  scrub_logs: true
-  sandbox_detect: true
-
-# Reporting
-report:
-  formats: [html, json, md]   # Export formats
-  output_dir: reports/        # Where to save reports
-```
+Located under `opsec/` and `core/opsec.py`.
++ **ProxyRotator** – rotates through HTTP/SOCKS proxies, supports chaining and Tor (`use_tor`).
++ **DNS-over-HTTPS** – `dns_over_https.py` performs asynchronous resolution to hide DNS queries.
++ **Sandbox Detector** – heuristics detecting CI/sandbox/VM environments.
++ **InfraManager** – provisions disposable domains/IPs and generates burner identities.
++ **Jitter & Identity** – random delays and header injection (`core/opsec.py`).
++ **Profiles** – `burner_profiles.yaml` contains pre‑built personas.
++ Log scrubbing is planned but not yet implemented.
 
 ---
 
-## 📝 Explanation of Fields
+## Machine Learning Features
 
-### **Global**
++ `predict_package_variants` – suggests typosquat names from a base package (`ml_models/package_model.json`).
++ `select_payload_for_stack` – chooses an appropriate payload template based on detected stack.
++ `classify_callback_severity` – rates callback events (`ml_models/severity.json`).
++ `adjust_opsec_behavior` – alters identities (UA, delay) based on risk level.
++ `score_target_priority` – ranks targets when generating feeds.
+Models are simple JSON look‑ups or optional sklearn pipelines.
+Training data and scripts reside in `ml_training/`.
 
-* `log_level`: Controls verbosity → `DEBUG` for dev, `INFO` for normal ops.
-* `log_file`: Central log file for all modules.
-* `default_preset`: If you don’t pass `--preset`, it uses this.
-
-### **Recon**
-
-* `wordlist`: Wordlist path for subdomain/package brute-forcing.
-* `threads`: Concurrency (10 = safe, 50+ = aggressive).
-* `timeout`: HTTP timeout in seconds.
-* `user_agents`: Pool of UAs for rotation → avoid fingerprinting.
-
-### **Exploit**
-
-* `package_managers`: Which ecosystems to target (e.g. npm, pip).
-* `auto_publish`: If `true`, DeathConfuser pushes payload automatically.
-* `verify_callback`: Only consider success if callback received.
-* `callback_url`: Your Interactsh/Burp Collab server.
-
-### **Payloads**
-
-* `polymorphic`: Randomizes payloads each run → avoids sig detection.
-* `builder`: Currently Jinja2-based template system.
-* `stealth_sleep`: Random delays to bypass sandbox timing checks.
-
-### **OPSEC**
-
-* `proxy_rotation`: Enable multi-proxy rotation.
-* `proxy_list`: File containing proxy IPs (HTTP/SOCKS).
-* `doh_resolver`: DNS-over-HTTPS server for leak-free lookups.
-* `scrub_logs`: Auto-wipe local logs after run.
-* `sandbox_detect`: Stops execution in sandbox/VM.
-
-### **Reports**
-
-* `formats`: Can export in HTML (pretty), JSON (machine-parseable), Markdown (bug bounty ready).
-* `output_dir`: Where reports are saved.
 
 ---
 
-## ⚡ Preset Example (`presets/aggressive.yaml`)
+## Supported Ecosystems
 
-```yaml
-# Aggressive engagement style
-recon:
-  threads: 50
-  timeout: 5
-exploit:
-  auto_publish: true
-  verify_callback: false   # Skip verification, just fire & forget
-opsec:
-  proxy_rotation: false    # YOLO mode
-```
-
----
-
-## 🌐 Interfaces
-
-* **CLI** → Fast usage, chaining with scripts.
-* **REST API** → Automate in bigger ops frameworks.
-* **WebUI** → Control panel with dashboards, preset selectors, exploit orchestration, and live callback monitoring.
+Modules implement a uniform interface:
++ **JavaScript/Node:** npm, yarn (npm module), meteor
++ **Python:** pypi, conda
++ **Java:** maven
++ **.NET:** nuget
++ **PHP:** composer
++ **Ruby:** rubygems
++ **Go:** golang
++ **Rust:** rust (cargo)
++ **Perl/Haskell/Swift/Objective‑C:** cpan, hackage, swiftpm, cocoapods
++ **Infrastructure:** docker, terraform
++ **Others:** hexpm (Elixir), cocoapods, conda, meteor
+Each module contains a `Scanner`, `payload` generator and `publisher`.
 
 ---
 
-## 🧩 Supported Ecosystems
+## Reporting
 
-* **npm** (JavaScript)
-* **pip/PyPI** (Python)
-* **cargo** (Rust)
-* **maven** (Java)
-* **nuget** (.NET)
-* **rubygems** (Ruby)
-* **composer** (PHP)
-* **docker** (Images / Hub hijacks)
-* **terraform** (Registry poisoning)
-* **golang** (Modules)
+`reports/exporter.py` normalises scan data and writes reports to:
++ `reports/json/scan.json`
++ `reports/html/scan.html`
++ `reports/markdown/scan.md`
+Templates are located under `reports/templates/`.
 
 ---
 
-## 👻 OPSEC Toolkit
+## Development Notes & Contributing
 
-* Proxy rotator with **SOCKS + HTTP support**
-* DNS over HTTPS resolvers (avoid local leaks)
-* Sandbox detection (VM markers, sleep-skipping)
-* Burner profiles & fake package metadata
-* Traffic jitter / padding to evade correlation
-* Auto log scrubbing + OPSEC verification engine
++ Designed for Python 3.10+.
++ Asynchronous code uses `aiohttp` and `asyncio`.
++ Tests cover core features (`test/`).
++ Plugins can extend functionality by subclassing `plugins.plugin_api.Plugin`.
 
----
-
-## 📊 Reports
-
-* **HTML** → Clean dashboards for executives.
-* **JSON** → Integrate with automation pipelines.
-* **Markdown** → Copy-paste ready for bug bounty reports.
-* Auto includes **exploit chain, timelines, payload hashes, IOCs.**
+Contributions are welcome via pull request.
+Please ensure additions are tested.
 
 ---
 
-## 📢 Announcements
+## Announcements
 
-**Please note that all the features mentioned here might not be implemented yet. These will be included in future updates to the software.**
+**There is no announcements.**
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 **DeathConfuser is for authorized penetration testing and research purposes only.**
-The author is not responsible for misuse.
+**The author is not responsible for misuse.**
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed over the [MIT License](LICENSE).
