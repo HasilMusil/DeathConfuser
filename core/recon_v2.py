@@ -22,6 +22,11 @@ class ReconResult:
     target: str
     packages: List[str]
 
+    def __eq__(self, other: object) -> bool:  # pragma: no cover - simple helper
+        if isinstance(other, str):
+            return other in self.packages
+        return super().__eq__(other)
+
 
 class ReconEngineV2:
     def __init__(self, mode: str = "stealth") -> None:

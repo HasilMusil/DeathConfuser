@@ -28,16 +28,16 @@ class Listener:
 
     async def _handle(self, request: web.Request) -> web.Response:
         """Handle incoming POST callback requests."""
-        data = await request.json(content_type=None)
+        data = await request.json()
+        data["token"] = request.match_info.get("token")
         self.callbacks.append(data)
         log.info("callback received: %s", data)
         return web.Response(text="ok")
 
     async def start(self) -> str:
-        """Start listener on an ephemeral port and return full callback URL."""
-        token = uuid4().hex
-        self._endpoint = f"/cb/{token}"
-        self._app.router.add_post(self._endpoint, self._handle)
+        """Start listener on an ephemeral port and return base callback URL."""
+        self._endpoint = "/cb"
+        self._app.router.add_post(f"{self._endpoint}/{{token}}", self._handle)
         self._runner = web.AppRunner(self._app)
         await self._runner.setup()
         self._site = web.TCPSite(self._runner, "127.0.0.1", 0)

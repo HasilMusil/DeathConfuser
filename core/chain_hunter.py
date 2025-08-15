@@ -27,4 +27,16 @@ class ChainHunter:
         return [f"{org}-dev", f"{org}-ci"]
 
 
-__all__ = ["ChainHunter"]
+async def hunt(org: str) -> List[str]:
+    """Convenience wrapper around :meth:`ChainHunter.quick_hunt`.
+
+    Parameters
+    ----------
+    org:
+        The organisation name to hunt for related accounts.
+    """
+
+    return await ChainHunter.quick_hunt(org)
+
+
+__all__ = ["ChainHunter", "hunt"]
