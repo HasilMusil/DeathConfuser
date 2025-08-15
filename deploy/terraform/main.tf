@@ -1,0 +1,1 @@
+# Terraform template placeholder

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from ..core.logger import get_logger
+from ..core import ml
 
 
 @dataclass
@@ -27,6 +28,7 @@ class InfraManager:
 
     def __init__(self) -> None:
         self.current: Optional[Infra] = None
+        self.identity: Optional[dict] = None
         self.log = get_logger(__name__)
 
     async def provision(self) -> Infra:
@@ -64,7 +66,7 @@ class InfraManager:
         self.current = None
 
     async def generate_burner_identity(self) -> dict:
-        """Generate a disposable identity for publishing."""
+        """Generate or rotate a disposable identity for publishing."""
         name = f"user-{uuid.uuid4().hex[:6]}"
         domain = random.choice([
             "mailinator.com",
@@ -77,11 +79,18 @@ class InfraManager:
         ])
         version = f"0.{random.randint(0,9)}.{random.randint(0,9)}"
         delay = random.uniform(0.5, 2.0)
-        await asyncio.sleep(0)  # allow scheduling
-        return {
+        profile = {
             "name": name,
             "email": email,
             "user_agent": user_agent,
             "version": version,
             "delay": delay,
         }
+        profile = ml.adjust_opsec_behavior(profile)
+        await asyncio.sleep(0)
+        self.identity = profile
+        return profile
+
+    async def rotate_identity(self) -> dict:
+        """Rotate the current identity during a run."""
+        return await self.generate_burner_identity()

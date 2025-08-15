@@ -4,9 +4,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .logger import get_logger
+from .ml import classify_callback_severity
 
 log = get_logger(__name__)
 
@@ -28,11 +29,21 @@ class CallbackManager:
         self.events: List[CallbackEvent] = []
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-    def record(self, target: str, registry: str, program: str, severity: str, data: dict) -> None:
+    def record(self, target: str, registry: str, program: str, severity: Optional[str] = None, data: Optional[dict] = None) -> None:
+        if data is None:
+            data = {}
+        if severity is None:
+            severity = classify_callback_severity(data)
         event = CallbackEvent(target, registry, program, severity, data)
         self.events.append(event)
         log.info("callback from %s via %s", target, registry)
         self.save()
+
+    def correlate(self) -> Dict[str, Dict[str, List[CallbackEvent]]]:
+        result: Dict[str, Dict[str, List[CallbackEvent]]] = {}
+        for ev in self.events:
+            result.setdefault(ev.target, {}).setdefault(ev.registry, []).append(ev)
+        return result
 
     def list(self, severity: Optional[str] = None) -> List[CallbackEvent]:
         if severity:

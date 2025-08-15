@@ -11,6 +11,7 @@ import random
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ..core.logger import get_logger
+from ..core import ml
 from ..opsec import load_profiles, PROFILE_FILE
 from ..utils.fs_utils import atomic_write, cleanup, temporary_directory
 
@@ -103,9 +104,12 @@ class PayloadBuilder:
         obfuscate: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         ephemeral: bool = False,
+        stack: Optional[str] = None,
         **variables: Any,
     ) -> RenderedPayload:
         """Render template, optionally write to ``output_dir`` and return info."""
+        if template == "auto" and stack:
+            template = ml.select_payload_for_stack(stack)
         content, meta = self.render(
             template,
             payload_code=payload_code,

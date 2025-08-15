@@ -1,0 +1,9 @@
+base,label
+demo,suffix_dev
+helper,suffix_dev
+demo,suffix_utils
+util,suffix_utils
+core,prefix_lib
+api,prefix_lib
+data,numeric_1
+calc,numeric_1

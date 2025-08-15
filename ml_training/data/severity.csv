@@ -1,0 +1,10 @@
+message,severity
+critical exploit detected,critical
+root password leak,critical
+privilege escalation attempt,critical
+warning memory high,medium
+some medium risk,medium
+minor bug found,low
+non exploitable issue,low
+user login success,info
+debug trace info,info
