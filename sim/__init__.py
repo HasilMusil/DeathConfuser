@@ -1,1 +1,1 @@
-"""Simulation helpers."""
+"""Simulation utilities for local testing."""

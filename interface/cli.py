@@ -27,6 +27,7 @@ from DeathConfuser.core import init as core_init
 from DeathConfuser.core.targets import load_targets
 from DeathConfuser.core.target_feed import update_target_file
 from DeathConfuser.core.recon import Recon
+from DeathConfuser.core.recon_v2 import ReconEngineV2
 from DeathConfuser.core.concurrency import run_tasks
 from DeathConfuser.modules import MODULES
 from DeathConfuser.modules.detect_registry import detect_registry, get_top_registry
@@ -37,7 +38,10 @@ __all__ = ["main", "run_scan"]
 async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
     """Perform a scan of the supplied targets with the given configuration."""
 
-    recon = Recon()
+    if config.data.get("recon_v2"):
+        recon = ReconEngineV2(config.data.get("recon_mode", "stealth"))
+    else:
+        recon = Recon()
     await update_target_file(target_file)
     targets = load_targets(target_file)
 

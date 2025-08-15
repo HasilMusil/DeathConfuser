@@ -1,0 +1,1 @@
+{"vectorizer": {"vocab": {}, "stop_words": []}, "model": {"coef": [], "intercept": [], "classes": ["suffix_dev", "suffix_utils", "prefix_lib", "numeric_1"]}}

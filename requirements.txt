@@ -9,3 +9,4 @@ aiohttp_socks
 stem
 colorlog
 tqdm
+scikit-learn

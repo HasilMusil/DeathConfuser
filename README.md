@@ -25,6 +25,15 @@ It automates **recon → payload generation → exploitation → callback verifi
 
 Originally designed for **Bug Bounty Hunters, Red Teams, and Offensive Security researchers**, it weaponizes modern software ecosystems against themselves — while keeping you cloaked with **OPSEC-grade stealth features.**
 
+### New in v3
+
+- Recon Engine v2 with GitHub/GitLab integration and ML name prediction
+- Unified ML layer powering payload selection, callback severity and target scoring
+- Auto listener with Interactsh support and dynamic callback endpoints
+- Burner infra rotation and artifact archiving
+- Plugin SDK, registry monitoring mode and chain builder utilities
+- Offline-trainable ML models with `ml_training/` scripts
+
 ---
 
 ## 🚀 Feature Matrix
@@ -90,6 +99,14 @@ git clone https://github.com/HasilMusil/DeathConfuser.git
 cd DeathConfuser
 pip install -r requirements.txt
 ```
+
+### Retrain ML Models (optional)
+
+```bash
+python ml_training/train_models.py
+```
+
+Generates updated `.json` model files in `ml_models/` using the synthetic datasets in `ml_training/data/`.
 
 ### 2️⃣ Recon a Target
 

@@ -7,6 +7,7 @@ import smtplib
 
 
 class EmailNotifier:
+    """Async email notifier using SMTP."""
     def __init__(self, host: str, sender: str, recipient: str) -> None:
         self.host = host
         self.sender = sender
@@ -22,5 +23,14 @@ class EmailNotifier:
         await loop.run_in_executor(None, self._send_sync, msg)
 
     def _send_sync(self, msg: EmailMessage) -> None:
-        with smtplib.SMTP(self.host) as smtp:  # pragma: no cover - requires smtpd
+        with smtplib.SMTP(self.host) as smtp:  # pragma: no cover
             smtp.send_message(msg)
+
+
+# Simple functional helper
+def send_email(smtp_server: str, sender: str, recipient: str, subject: str, body: str) -> None:
+    notifier = EmailNotifier(smtp_server, sender, recipient)
+    asyncio.run(notifier.send(subject, body))
+
+
+__all__ = ["EmailNotifier", "send_email"]

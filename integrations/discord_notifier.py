@@ -2,15 +2,14 @@
 from __future__ import annotations
 
 import aiohttp
-import asyncio
 from typing import Dict, Any
-
 from ..core.logger import get_logger
 
 log = get_logger(__name__)
 
 
 class DiscordNotifier:
+    """Async Discord webhook notifier."""
     def __init__(self, webhook_url: str) -> None:
         self.webhook_url = webhook_url
 
@@ -22,3 +21,12 @@ class DiscordNotifier:
                     log.error("discord error %s", resp.status)
                     return False
                 return True
+
+
+# Simple functional helper for quick usage
+async def send_message(webhook: str, message: str) -> bool:
+    notifier = DiscordNotifier(webhook)
+    return await notifier.send(message)
+
+
+__all__ = ["DiscordNotifier", "send_message"]

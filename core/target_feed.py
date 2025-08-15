@@ -66,3 +66,17 @@ async def update_target_file(path: str | Path) -> Path:
     else:
         log.debug("no targets retrieved; existing file preserved")
     return target_path
+
+
+__all__ = ["fetch_targets", "update_target_file"]
+
+async def update_target_file(path: str | Path) -> Path:
+    """Retrieve targets and persist them to ``path``."""
+    target_path = Path(path)
+    targets = await fetch_targets()
+    if targets:
+        target_path.write_text("\n".join(targets) + "\n")
+        log.info("Wrote %s targets to %s", len(targets), target_path)
+    else:
+        log.debug("no targets retrieved; existing file preserved")
+    return target_path

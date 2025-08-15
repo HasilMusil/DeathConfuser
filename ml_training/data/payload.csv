@@ -1,0 +1,7 @@
+stack,payload
+python,python_payload.j2
+python,python_payload.j2
+node,node_payload.j2
+node,node_payload.j2
+java,java_payload.j2
+docker,docker_payload.j2

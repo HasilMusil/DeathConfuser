@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .logger import get_logger
 from .ml import classify_callback_severity
@@ -44,6 +44,12 @@ class CallbackManager:
         self.events.append(event)
         log.info("callback from %s via %s", target, registry)
         self.save()
+
+    def correlate(self) -> Dict[str, Dict[str, List[CallbackEvent]]]:
+        result: Dict[str, Dict[str, List[CallbackEvent]]] = {}
+        for ev in self.events:
+            result.setdefault(ev.target, {}).setdefault(ev.registry, []).append(ev)
+        return result
 
     def list(self, severity: Optional[str] = None) -> List[CallbackEvent]:
         if severity:

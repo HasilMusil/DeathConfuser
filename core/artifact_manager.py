@@ -1,4 +1,4 @@
-"""Store run artifacts such as HTTP dumps or screenshots."""
+"""Manage artifacts like HTTP dumps or screenshots."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +11,7 @@ class ArtifactManager:
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def save_text(self, name: str, content: str) -> Path:
-        path = self.base_dir / name
+        path = self.base_dir / f"{name}.txt"
         path.write_text(content)
         return path
 

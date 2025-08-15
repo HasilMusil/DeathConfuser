@@ -11,7 +11,8 @@ class InfraManagerTest(unittest.IsolatedAsyncioTestCase):
         mgr = InfraManager()
         ident = await mgr.generate_burner_identity()
         self.assertIn('@', ident['email'])
-        self.assertIn('user_agent', ident)
+        rotated = await mgr.rotate_identity()
+        self.assertNotEqual(ident['email'], rotated['email'])
 
 if __name__ == '__main__':
     unittest.main()
