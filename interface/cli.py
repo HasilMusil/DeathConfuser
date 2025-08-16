@@ -38,14 +38,14 @@ __all__ = ["main", "run_scan"]
 async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
     """Perform a scan of the supplied targets with the given configuration."""
 
-    if config.data.get("recon_v2"):
-        recon = ReconEngineV2(config.data.get("recon_mode", "stealth"))
+    if config.recon.v2_engine:
+        recon = ReconEngineV2(config.recon.mode)
     else:
         recon = Recon()
     await update_target_file(target_file)
     targets = load_targets(target_file)
 
-    modules = config.data.get("modules", list(MODULES.keys()))
+    modules = config.get("modules", list(MODULES.keys()))
     searchers = {name: MODULES[name] for name in modules if name in MODULES}
 
     logger = get_logger("scan")
@@ -132,9 +132,9 @@ async def run_scan(config: Config, target_file: str) -> List[Dict[str, object]]:
         return {"target": url, "findings": findings}
 
     tasks = [lambda url=t: scan(url) for t in targets]
-    limit = config.data.get("concurrency", {}).get("limit", 10)
-    retries = config.data.get("concurrency", {}).get("retries", 1)
-    timeout = config.data.get("concurrency", {}).get("timeout", 30)
+    limit = config.concurrency.limit
+    retries = config.concurrency.retries
+    timeout = config.concurrency.timeout
     return await run_tasks(tasks, limit=limit, retries=retries, timeout=timeout)
 
 
@@ -157,13 +157,27 @@ def main(argv: Optional[list[str]] = None) -> None:
         help="Payload builder to use",
     )
     parser.add_argument("-c", "--config", help="Path to config file")
+    parser.add_argument(
+        "--set",
+        action="append",
+        metavar="KEY=VAL",
+        help="Override arbitrary config values",
+    )
     args = parser.parse_args(argv)
 
-    config = Config.load(args.config, args.preset)
+    overrides = {}
+    if args.set:
+        for item in args.set:
+            if "=" not in item:
+                parser.error("--set expects KEY=VAL")
+            key, val = item.split("=", 1)
+            overrides[key.strip()] = val.strip()
+
+    config = Config.load(args.config, args.preset, overrides)
     core_init(args.config, args.preset)
     logger = get_logger("deathconfuser", config.log_file, config.log_level)
     logger.info("DeathConfuser initialized")
-    config.data["payload_builder"] = args.builder
+    config["payloads"]["builder"] = args.builder
 
     mode = args.mode
 
