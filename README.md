@@ -119,53 +119,171 @@ python deathconfuser.py --mode cli --targets targets.txt --output reports
 
 ---
 
-## Configuration System
+###  How Config Works in DeathConfuser
 
-Configuration values are layered:
-1. **Default** – `config.yaml` (if present).
-2. **Preset** – YAML file from `presets/` selected via `--preset`.
-3. **Overrides** – `--set key=value` pairs on the CLI.
+* **Main config file:** `config.yaml` (project root)
+* **Presets folder:** `presets/` (e.g. `dev.yaml`, `stealth.yaml`, `aggressive.yaml`)
+* **CLI override:** `--set key=value` for deep nested keys
 
-`core/config.py` exposes:
-+ `Config.load(path, preset, overrides)` – merge all layers.
-+ `ArgumentParser.parse()` – convenience parser returning a `Config` instance.
-+ Deep dot‑notation overrides (`--set recon.mode=aggressive`).
+**Merge order is always deterministic**:
 
-### Example `config.yaml`
-``` yaml
-# logging
-log_level: INFO
-log_file: logs/deathconfuser.log
+1. **Global defaults** → loaded from `config.yaml`
+2. **Preset file** → `--preset name` or `default_preset` in `config.yaml`
+3. **External config** → `-c / --config` (overrides both defaults & preset)
+4. **CLI overrides** → `--set key=value` (deep merge, dot-notation & list indexing)
 
-# default targets file
-targets: targets.txt
+*Preset and external config merges are **shallow** at top-level keys; CLI `--set` merges are **deep**, creating nested dicts if missing.*
 
-# recon behaviour
-recon_v2: true
-recon_mode: stealth
+---
 
-# enabled modules
-modules:
-  - npm
-  - pypi
-  - maven
+## Example `config.yaml`
 
-# async execution limits
+```yaml
+# Global configuration for DeathConfuser
+
+# Logging
+log_level: INFO                # DEBUG / INFO / WARNING / ERROR
+log_file: logs/deathconfuser.log  # Relative or absolute path to log file
+
+# Default preset if none specified in CLI
+default_preset: dev
+
+# Recon settings
+recon:
+  wordlist: utils/wordlists/common.txt  # Wordlist for subdomain/pkg hunting
+  threads: 10                           # Concurrency for recon (safe = 10, high = 50+)
+  timeout: 10                           # HTTP request timeout in seconds
+  user_agents:                          # UA rotation pool (avoids fingerprinting)
+    - Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+    - curl/7.88.0
+    - Wget/1.21.3
+  mode: stealth                         # Default scan mode: passive / stealth / aggressive
+  v2_engine: true                       # Use ReconEngineV2 if true
+
+# Exploitation settings
+exploit:
+  package_managers:                     # Which ecosystems to scan/publish to
+    - npm
+    - pypi
+    - cargo
+    - maven
+  auto_publish: true                     # Automatically publish found package names
+  verify_callback: true                  # Only confirm exploitation if callback received
+  callback:
+    http_url: https://xyz.oast.fun       # Primary HTTP callback endpoint
+    dns_domain: cb.example               # Optional DNS callback domain
+  retries: 1                             # Retry failed exploitation attempts
+  timeout: 30                            # Exploitation request timeout
+
+# Payload system
+payloads:
+  polymorphic: true                      # Enable randomized, mutation-based payloads
+  builder: template                      # template | dynamic
+  stealth_sleep: 5-15                    # Random delay (seconds) for sandbox/timing evasion
+  obfuscation:                           # Optional payload obfuscation
+    base64: true
+    xor: false
+    timing: false
+
+# OPSEC / Privacy
+opsec:
+  proxy_rotation: true
+  proxy_list: proxies.txt                # Path to proxy list file (HTTP/SOCKS)
+  use_tor: false                         # Route traffic via Tor (requires running Tor daemon)
+  doh_resolver: https://dns.google/dns-query  # DNS-over-HTTPS server
+  sandbox_detect: true                   # Abort in CI/VM/sandbox environments
+  scrub_logs: false                      # Planned feature: remove sensitive data from logs
+  burner_profiles: opsec/burner_profiles.yaml # Pre-built fake identities
+
+# Reporting
+report:
+  formats: [html, json, markdown]        # html | json | markdown
+  output_dir: reports/                   # Directory to store reports
+  template_dir: reports/templates/       # Directory containing export templates
+  callback_log: reports/json/callbacks.json  # File to record callbacks
+
+# Concurrency
 concurrency:
-  limit: 10
-  retries: 1
-  timeout: 30
-
-# callback destinations
-callback:
-  http_url: http://127.0.0.1:8000/
-  dns_domain: cb.example
-
-# preferred payload builder
-payload_builder: template
+  limit: 10                              # Max concurrent async tasks
+  retries: 1                             # Retry count for failed requests
+  timeout: 30                            # Task timeout in seconds
 ```
 
-Any of these can be overridden by presets or `--set`.
+---
+
+## Explanation of Fields
+
+### **Global**
+
+* `log_level`: Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
+* `log_file`: Path to log output. Relative paths are resolved from project root.
+* `default_preset`: Name of preset to auto-load if `--preset` not passed.
+
+---
+
+### **Recon**
+
+* `wordlist`: Wordlist path for subdomain/package enumeration.
+* `threads`: Thread count for synchronous operations. For async scans, see `concurrency.limit`.
+* `timeout`: Max wait time for each request.
+* `user_agents`: Pool for random UA rotation per request.
+* `mode`: Recon mode – `passive` (no requests), `stealth` (low volume), `aggressive` (fast & noisy).
+* `v2_engine`: Switch to ReconEngineV2 for better detection & speed.
+
+---
+
+### **Exploit**
+
+* `package_managers`: List of ecosystems to scan and publish payload packages into.
+* `auto_publish`: If true, automatically upload payload package once a free namespace is found.
+* `verify_callback`: Require a successful callback event before marking a target exploited.
+* `callback.http_url`: HTTP endpoint for receiving callbacks (Interactsh, Burp Collaborator, custom).
+* `callback.dns_domain`: Optional domain for DNS-based callbacks.
+* `retries`: Retry failed publication attempts.
+* `timeout`: Timeout for publishing and verification requests.
+
+---
+
+### **Payloads**
+
+* `polymorphic`: Enable payload mutation per run (avoids signature-based detection).
+* `builder`:
+
+  * `template`: Jinja2 templates from `payloads/`
+  * `dynamic`: Auto-build payload from target’s stack fingerprint
+* `stealth_sleep`: Range in seconds for random delays before execution.
+* `obfuscation.base64`: Encode payload in base64.
+* `obfuscation.xor`: XOR-encode payload.
+* `obfuscation.timing`: Insert timing-based delays for anti-analysis.
+
+---
+
+### **OPSEC**
+
+* `proxy_rotation`: Rotate outbound requests through a proxy list.
+* `proxy_list`: File containing proxy IPs.
+* `use_tor`: Enable routing through Tor network.
+* `doh_resolver`: DNS-over-HTTPS endpoint to avoid local DNS leaks.
+* `sandbox_detect`: Detect CI, virtual machines, and sandbox environments.
+* `scrub_logs`: Planned feature to remove sensitive lines from local logs.
+* `burner_profiles`: YAML file with pre-generated fake identities for OPSEC.
+
+---
+
+### **Reports**
+
+* `formats`: Output formats (`html` for human-readable, `json` for automation, `markdown` for bug bounty reports).
+* `output_dir`: Directory for storing generated reports.
+* `template_dir`: Jinja2 templates for HTML/Markdown export.
+* `callback_log`: File to record received callback events in JSON format.
+
+---
+
+### **Concurrency**
+
+* `limit`: Max simultaneous async tasks.
+* `retries`: Retry attempts for failed requests.
+* `timeout`: Async task timeout in seconds.
 
 ---
 
