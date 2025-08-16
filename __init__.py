@@ -1,2 +1,0 @@
-"""DeathConfuser package marker."""
-
