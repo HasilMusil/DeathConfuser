@@ -1,0 +1,53 @@
+global:
+  log_level: INFO
+  log_file: deathconfuser.log
+  default_preset: null
+
+recon:
+  wordlist: wordlists/common.txt
+  threads: 10
+  timeout: 30
+  user_agents:
+    - Mozilla/5.0
+  mode: stealth
+  v2_engine: false
+
+exploit:
+  package_managers: [npm, pip]
+  auto_publish: false
+  verify_callback: true
+  callback:
+    http_url: ""
+    dns_domain: ""
+  retries: 3
+  timeout: 30
+
+payloads:
+  polymorphic: false
+  builder: template
+  stealth_sleep: 0
+  obfuscation:
+    base64: false
+    xor: false
+    timing: false
+
+opsec:
+  proxy_rotation: false
+  proxy_list: []
+  use_tor: false
+  doh_resolver: ""
+  sandbox_detect: false
+  scrub_logs: false
+  burner_profiles: false
+
+report:
+  formats: [json]
+  output_dir: reports
+  template_dir: templates
+  callback_log: false
+
+concurrency:
+  limit: 10
+  retries: 1
+  timeout: 30
+

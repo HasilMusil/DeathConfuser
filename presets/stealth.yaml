@@ -1,23 +1,14 @@
 # Stealth profile inheriting defaults from config.yaml
-# Focuses on maximum OPSEC with Tor proxy and jittered delays
-threads: 2
+# Focuses on OPSEC by using Tor and reduced thread count
+
+global:
+  log_level: WARNING
+
+recon:
+  threads: 2
+  mode: stealth
+
 opsec:
-  jitter: true
-  stealth_delay: "3-7"
-  rotate_metadata: true
-  burner_accounts: true
-  random_user_agent: true
-  random_versions: true
-  publish_jitter: "1-3"
-proxy:
-  use_proxy: true
-  chain:
-    - tor://127.0.0.1:9050
-callbacks:
-  interactsh: false
-  dns: true
-  burp_collaborator: false
-automation:
-  auto_publish: false
-logging:
-  level: warning
+  proxy_rotation: true
+  use_tor: true
+
