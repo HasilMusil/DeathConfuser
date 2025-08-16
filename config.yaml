@@ -34,11 +34,20 @@ payloads:
 opsec:
   proxy_rotation: false
   proxy_list: []
+  use_proxy: false
+  proxy_chain: []
   use_tor: false
   doh_resolver: ""
   sandbox_detect: false
   scrub_logs: false
   burner_profiles: false
+  jitter: false
+  stealth_delay: ""
+  rotate_metadata: false
+  burner_accounts: false
+  random_user_agent: false
+  random_versions: false
+  publish_jitter: ""
 
 report:
   formats: [json]
@@ -46,8 +55,17 @@ report:
   template_dir: templates
   callback_log: false
 
+callback:
+  http_url: ""
+  dns_domain: ""
+  interactsh:
+    enabled: false
+    server: ""
+  burp:
+    enabled: false
+    collaborator_url: ""
+
 concurrency:
   limit: 10
   retries: 1
   timeout: 30
-

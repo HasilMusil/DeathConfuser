@@ -22,13 +22,13 @@ from __future__ import annotations
 import argparse
 import re
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
+from .callback import CallbackClient
 
 DEFAULT_CONFIG_PATH = Path("config.yaml")
 PRESET_DIR = Path("presets")
-
 
 # ---------------------------------------------------------------------------
 # Schema definition
@@ -91,16 +91,16 @@ SCHEMA: Dict[str, Field] = {
             },
             "auto_publish": {"type": bool, "default": False},
             "verify_callback": {"type": bool, "default": True},
+            "retries": {"type": int, "default": 3},
+            "timeout": {"type": int, "default": 30},
             "callback": {
                 "type": dict,
+                "default": {},
                 "schema": {
                     "http_url": {"type": str, "default": ""},
                     "dns_domain": {"type": str, "default": ""},
                 },
-                "default": {},
             },
-            "retries": {"type": int, "default": 3},
-            "timeout": {"type": int, "default": 30},
         },
     },
     "payloads": {
@@ -112,12 +112,12 @@ SCHEMA: Dict[str, Field] = {
             "stealth_sleep": {"type": int, "default": 0},
             "obfuscation": {
                 "type": dict,
+                "default": {},
                 "schema": {
                     "base64": {"type": bool, "default": False},
                     "xor": {"type": bool, "default": False},
                     "timing": {"type": bool, "default": False},
                 },
-                "default": {},
             },
         },
     },
@@ -127,11 +127,20 @@ SCHEMA: Dict[str, Field] = {
         "schema": {
             "proxy_rotation": {"type": bool, "default": False},
             "proxy_list": {"type": list, "default": [], "subtype": str},
+            "use_proxy": {"type": bool, "default": False},
+            "proxy_chain": {"type": list, "default": [], "subtype": str},
             "use_tor": {"type": bool, "default": False},
             "doh_resolver": {"type": str, "default": ""},
             "sandbox_detect": {"type": bool, "default": False},
             "scrub_logs": {"type": bool, "default": False},
             "burner_profiles": {"type": bool, "default": False},
+            "jitter": {"type": bool, "default": False},
+            "stealth_delay": {"type": str, "default": ""},
+            "rotate_metadata": {"type": bool, "default": False},
+            "burner_accounts": {"type": bool, "default": False},
+            "random_user_agent": {"type": bool, "default": False},
+            "random_versions": {"type": bool, "default": False},
+            "publish_jitter": {"type": str, "default": ""},
         },
     },
     "report": {
@@ -153,8 +162,31 @@ SCHEMA: Dict[str, Field] = {
             "timeout": {"type": int, "default": 30},
         },
     },
+    "callback": {
+        "type": dict,
+        "default": {},
+        "schema": {
+            "http_url": {"type": str, "default": ""},
+            "dns_domain": {"type": str, "default": ""},
+            "interactsh": {
+                "type": dict,
+                "default": {},
+                "schema": {
+                    "enabled": {"type": bool, "default": False},
+                    "server": {"type": str, "default": ""},
+                },
+            },
+            "burp": {
+                "type": dict,
+                "default": {},
+                "schema": {
+                    "enabled": {"type": bool, "default": False},
+                    "collaborator_url": {"type": str, "default": ""},
+                },
+            },
+        },
+    },
 }
-
 
 # ---------------------------------------------------------------------------
 # Helper functions
@@ -168,14 +200,8 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
 
 
 def _deep_merge(base: Dict[str, Any], other: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursively merge ``other`` into ``base`` and return ``base``."""
-
     for key, val in other.items():
-        if (
-            key in base
-            and isinstance(base[key], dict)
-            and isinstance(val, dict)
-        ):
+        if key in base and isinstance(base[key], dict) and isinstance(val, dict):
             _deep_merge(base[key], val)
         else:
             base[key] = val
@@ -185,35 +211,7 @@ def _deep_merge(base: Dict[str, Any], other: Dict[str, Any]) -> Dict[str, Any]:
 _TOKEN_RE = re.compile(r"([^\.\[]+)(?:\[(\d+)\])?")
 
 
-def _traverse_schema(key: str) -> Tuple[Field, Optional[Field]]:
-    """Return schema field and parent for ``key``."""
-
-    parts = _TOKEN_RE.findall(key)
-    current: Field = SCHEMA
-    field: Optional[Field] = None
-    for name, _idx in parts:
-        if name not in current:
-            raise ValueError(f"Unknown configuration field: {key}")
-        field = current[name]
-        if field.get("type") is dict:
-            current = field.get("schema", {})
-        elif field.get("type") is list:
-            # For list types, dive into element schema if provided
-            subtype = field.get("subtype")
-            if subtype is dict:
-                current = field.get("schema", {})
-            else:
-                current = {}
-        else:
-            current = {}
-    if field is None:
-        raise ValueError(f"Unknown configuration field: {key}")
-    return field, current if current is not SCHEMA else None
-
-
 def _cast(value: str, field: Field) -> Any:
-    """Cast string ``value`` according to ``field`` definition."""
-
     expected = field.get("type")
     if expected is bool:
         return _bool(value) if isinstance(value, str) else bool(value)
@@ -223,7 +221,6 @@ def _cast(value: str, field: Field) -> Any:
         return float(value)
     if expected is list:
         if isinstance(value, str):
-            # allow comma separated or YAML list
             if value.strip().startswith("["):
                 parsed = yaml.safe_load(value)
             else:
@@ -249,15 +246,12 @@ def _cast(value: str, field: Field) -> Any:
 
 
 def _set_override(data: Dict[str, Any], key: str, raw_value: str) -> None:
-    """Apply a single override ``key=value`` to ``data`` respecting schema."""
-
     tokens = _TOKEN_RE.findall(key)
     target = data
     schema_field: Field = SCHEMA
     for name, idx in tokens[:-1]:
         field = schema_field[name]
         if field.get("type") is list:
-            # ensure list exists
             lst = target.setdefault(name, [])
             list_index = int(idx) if idx else 0
             while len(lst) <= list_index:
@@ -285,8 +279,6 @@ def _set_override(data: Dict[str, Any], key: str, raw_value: str) -> None:
 
 
 def _apply_schema(schema: Dict[str, Field], data: Dict[str, Any], path: str) -> Dict[str, Any]:
-    """Validate ``data`` against ``schema`` and fill defaults."""
-
     result: Dict[str, Any] = {}
     for key, field in schema.items():
         if key in data:
@@ -316,28 +308,20 @@ def _apply_schema(schema: Dict[str, Field], data: Dict[str, Any], path: str) -> 
                 raise ValueError(f"{path+key} must be one of {field['choices']}")
         result[key] = value
 
-    # check for unknown fields
     extra = set(data.keys()) - set(schema.keys())
     if extra:
         raise ValueError(f"Unknown configuration fields: {', '.join(path + e for e in extra)}")
     return result
 
-
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-
 class Config:
-    """Object wrapper around the configuration dictionary.
-
-    Provides both attribute and mapping style access to values.
-    """
-
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any], callback_client: Optional[CallbackClient] = None):
         self._data = data
+        self._callback_client = callback_client
 
-    # --- mapping protocol -------------------------------------------------
     def __getitem__(self, key: str) -> Any:
         val = self._data[key]
         if isinstance(val, dict):
@@ -350,7 +334,6 @@ class Config:
     def get(self, key: str, default: Any = None) -> Any:
         return self._data.get(key, default)
 
-    # --- attribute access -------------------------------------------------
     def __getattr__(self, name: str) -> Any:
         if name in self._data:
             val = self._data[name]
@@ -359,7 +342,6 @@ class Config:
             return val
         raise AttributeError(name)
 
-    # convenience properties for common fields
     @property
     def log_level(self) -> str:
         return self._data.get("global", {}).get("log_level", "INFO")
@@ -369,10 +351,13 @@ class Config:
         return self._data.get("global", {}).get("log_file")
 
     @property
-    def data(self) -> Dict[str, Any]:  # backward compat
+    def data(self) -> Dict[str, Any]:
         return self._data
 
-    # ------------------------------------------------------------------
+    @property
+    def callback_client(self) -> CallbackClient:
+        return self._callback_client
+
     @classmethod
     def load(
         cls,
@@ -380,11 +365,8 @@ class Config:
         preset: Optional[str] = None,
         overrides: Optional[Dict[str, str]] = None,
     ) -> "Config":
-        """Load and validate the configuration."""
-
         config: Dict[str, Any] = _load_yaml(DEFAULT_CONFIG_PATH)
 
-        # determine preset
         preset_name = preset or config.get("global", {}).get("default_preset")
         if preset_name:
             preset_path = PRESET_DIR / f"{preset_name}.yaml"
@@ -399,17 +381,33 @@ class Config:
 
         validated = _apply_schema(SCHEMA, config, path="")
 
-        # record preset path for later reference
+        cb_cfg = validated.get("callback", {})
+        interact_url = (
+            cb_cfg.get("interactsh", {}).get("server")
+            if cb_cfg.get("interactsh", {}).get("enabled")
+            else None
+        )
+        burp_url = (
+            cb_cfg.get("burp", {}).get("collaborator_url")
+            if cb_cfg.get("burp", {}).get("enabled")
+            else None
+        )
+        callback_client = CallbackClient(
+            http_url=cb_cfg.get("http_url") or None,
+            dns_domain=cb_cfg.get("dns_domain") or None,
+            interact_url=interact_url,
+            burp_collaborator=burp_url,
+        )
+
         if preset_name:
             validated["preset"] = preset_name
         if config_path:
             validated["config_path"] = config_path
-        return cls(validated)
+
+        return cls(validated, callback_client)
 
 
 class ArgumentParser(argparse.ArgumentParser):
-    """Argument parser that returns a :class:`Config` instance."""
-
     def __init__(self) -> None:
         super().__init__(description="DeathConfuser framework")
         self.add_argument("-c", "--config", help="Path to config file")
@@ -431,4 +429,3 @@ class ArgumentParser(argparse.ArgumentParser):
                 key, val = item.split("=", 1)
                 overrides[key.strip()] = val.strip()
         return Config.load(args.config, args.preset, overrides)
-
